@@ -286,63 +286,102 @@ function App() {
 
       {/* ===== 總覽 ===== */}
       {tab === 'dashboard' && (
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '180px 1fr', gap: 16 }}>
-          {/* Donut */}
-          <div style={{ ...s.card, padding: 20, display: 'flex', flexDirection: isMobile ? 'row' : 'column', alignItems: 'center', gap: 16 }}>
-            <div style={{ flexShrink: 0, width: isMobile ? 110 : '100%' }}>
-              <DonutChart segments={byCat.map(b => ({ color: b.color, value: b.value }))} total={netWorth > 0 ? netWorth : totalAssets} />
-            </div>
-            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {byCat.map((b, i) => (
-                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <div style={{ width: 7, height: 7, borderRadius: '50%', background: b.color }} />
-                    <span style={{ fontSize: 11, color: '#64748b' }}>{b.label}</span>
+        isMobile ? (
+          /* ── 手機版：上下疊排 ── */
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {/* 圓餅圖卡片 */}
+            <div style={{ ...s.card, padding: '20px 16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+                <div style={{ width: 160 }}>
+                  <DonutChart segments={byCat.map(b => ({ color: b.color, value: b.value }))} total={netWorth > 0 ? netWorth : totalAssets} />
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 12px' }}>
+                {byCat.map((b, i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <div style={{ width: 6, height: 6, borderRadius: '50%', background: b.color, flexShrink: 0 }} />
+                      <span style={{ fontSize: 11, color: '#64748b' }}>{b.label}</span>
+                    </div>
+                    <span style={{ fontSize: 11, color: '#cbd5e1', marginLeft: 4 }}>
+                      {totalAssets > 0 ? ((b.value / totalAssets) * 100).toFixed(1) : 0}%
+                    </span>
                   </div>
-                  <span style={{ fontSize: 11, color: '#cbd5e1' }}>
-                    {totalAssets > 0 ? ((b.value / totalAssets) * 100).toFixed(1) : 0}%
-                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* 資產清單（card 列） */}
+            <div style={s.card}>
+              {enriched.map((a, i) => (
+                <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: i < enriched.length - 1 ? '1px solid #0d1520' : 'none' }}>
+                  <div>
+                    <div style={{ color: '#f1f5f9', fontWeight: 500, fontSize: 13 }}>{a.symbol}</div>
+                    <div style={{ fontSize: 10, color: '#334155', marginTop: 2 }}>{a.name}</div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ color: '#cbd5e1', fontSize: 13 }}>{fmtTWD(a.valueTWD)}</div>
+                    <div style={{ fontSize: 10, color: '#475569', marginTop: 2 }}>
+                      {totalAssets > 0 ? ((a.valueTWD / totalAssets) * 100).toFixed(1) + '%' : '--'}
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
-
-          {/* Asset rows */}
-          <div style={{ ...s.card, overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: isMobile ? 11 : 12, minWidth: isMobile ? 420 : 'auto' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid #131f2e' }}>
-                  {['標的', '市值', '佔比', ...(isMobile ? [] : ['板塊', '數量', '單價(TWD)'])].map((h, i) => (
-                    <th key={i} style={{ padding: isMobile ? '10px 10px' : '11px 14px', textAlign: i >= (isMobile ? 1 : 2) ? 'right' : 'left', color: '#334155', fontWeight: 400, whiteSpace: 'nowrap' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {enriched.map(a => (
-                  <tr key={a.id} style={{ borderBottom: '1px solid #0d1520' }}
-                    onMouseEnter={e => e.currentTarget.style.background = '#131f2e'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                    <td style={{ padding: isMobile ? '9px 10px' : '10px 14px' }}>
-                      <div style={{ color: '#f1f5f9', fontWeight: 500 }}>{a.symbol}</div>
-                      <div style={{ fontSize: 10, color: '#334155' }}>{a.name}</div>
-                    </td>
-                    <td style={{ padding: isMobile ? '9px 10px' : '10px 14px', textAlign: 'right', color: '#cbd5e1', whiteSpace: 'nowrap' }}>{fmtTWD(a.valueTWD)}</td>
-                    <td style={{ padding: isMobile ? '9px 10px' : '10px 14px', textAlign: 'right', color: '#475569', whiteSpace: 'nowrap' }}>
-                      {totalAssets > 0 ? ((a.valueTWD / totalAssets) * 100).toFixed(1) + '%' : '--'}
-                    </td>
-                    {!isMobile && <>
+        ) : (
+          /* ── 桌面版：左側 donut + 右側 table ── */
+          <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: 16 }}>
+            <div style={{ ...s.card, padding: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+              <DonutChart segments={byCat.map(b => ({ color: b.color, value: b.value }))} total={netWorth > 0 ? netWorth : totalAssets} />
+              <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {byCat.map((b, i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div style={{ width: 7, height: 7, borderRadius: '50%', background: b.color }} />
+                      <span style={{ fontSize: 11, color: '#64748b' }}>{b.label}</span>
+                    </div>
+                    <span style={{ fontSize: 11, color: '#cbd5e1' }}>
+                      {totalAssets > 0 ? ((b.value / totalAssets) * 100).toFixed(1) : 0}%
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div style={{ ...s.card, overflow: 'hidden' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid #131f2e' }}>
+                    {['標的', '板塊', '數量', '單價(TWD)', '市值', '佔總資產'].map((h, i) => (
+                      <th key={i} style={{ padding: '11px 14px', textAlign: i >= 2 ? 'right' : 'left', color: '#334155', fontWeight: 400 }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {enriched.map(a => (
+                    <tr key={a.id} style={{ borderBottom: '1px solid #0d1520' }}
+                      onMouseEnter={e => e.currentTarget.style.background = '#131f2e'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                      <td style={{ padding: '10px 14px' }}>
+                        <div style={{ color: '#f1f5f9', fontWeight: 500 }}>{a.symbol}</div>
+                        <div style={{ fontSize: 10, color: '#334155' }}>{a.name}</div>
+                      </td>
                       <td style={{ padding: '10px 14px' }}>
                         <span style={s.tag(CATEGORY_META[a.category]?.color || '#94a3b8')}>{CATEGORY_META[a.category]?.label}</span>
                       </td>
                       <td style={{ padding: '10px 14px', textAlign: 'right', color: '#94a3b8' }}>{fmtNum(a.qty, a.qty < 1 ? 8 : 2)}</td>
                       <td style={{ padding: '10px 14px', textAlign: 'right', color: '#94a3b8' }}>{fmtNum(a.unitPrice, 0)}</td>
-                    </>}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                      <td style={{ padding: '10px 14px', textAlign: 'right', color: '#cbd5e1' }}>{fmtTWD(a.valueTWD)}</td>
+                      <td style={{ padding: '10px 14px', textAlign: 'right', color: '#475569' }}>
+                        {totalAssets > 0 ? ((a.valueTWD / totalAssets) * 100).toFixed(1) + '%' : '--'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        )
       )}
 
       {/* ===== 資產管理 ===== */}
