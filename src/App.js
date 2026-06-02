@@ -117,7 +117,7 @@ function DonutChart({ segments, total }) {
           stroke={s.color}
           strokeWidth={strokeW}
           strokeDasharray={`${circ * s.pct} ${circ}`}
-          strokeDashoffset={circ - circ * s.offset}
+          strokeDashoffset={`${-circ * s.offset}`}
           transform={`rotate(-90 ${cx} ${cy})`}
           style={{ filter: `drop-shadow(0 0 6px ${s.color}60)` }}
         />
