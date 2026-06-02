@@ -251,12 +251,12 @@ function App() {
     ...CATEGORY_META[cat],
   }));
 
-  // 驗證加總
-  if (process && typeof console !== 'undefined') {
+  // 驗證加總（開 DevTools Console 可查看）
+  React.useEffect(() => {
     const pctSum = byCat.reduce((s, b) => s + b.pct, 0);
     console.log('[byCat]', byCat.map(b => `${b.label} ${(b.pct*100).toFixed(1)}% NT$${Math.round(b.value).toLocaleString()}`));
     console.log('[pct sum]', pctSum.toFixed(4));
-  }
+  }, [JSON.stringify(byCat)]);
 
   // 00631L再平衡
   const tw631 = enriched.find(a => a.symbol === '00631L');
