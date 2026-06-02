@@ -94,35 +94,33 @@ async function fetchAllPrices(assets, usdRate) {
 // ===== 甜甜圈圖 =====
 function DonutChart({ segments, total }) {
   const cx = 100, cy = 100, r = 70, strokeW = 24;
-  const circ = 2 * Math.PI * r; // ≈ 439.82
+  const circumference = 2 * Math.PI * r; // ≈ 439.8
 
-  const slices = [];
-  let offset = 0;
-  segments.forEach(s => {
-    if (s.value <= 0) return;
-    const pct = s.value / total;
-    slices.push({ ...s, pct, offset });
-    offset += pct;
-  });
+  let cumulativePct = 0;
+  const slices = segments
+    .filter(s => s.pct > 0)
+    .map(seg => {
+      const dashArray = (seg.pct * circumference) + ' ' + circumference;
+      const dashOffset = circumference - (cumulativePct * circumference);
+      cumulativePct += seg.pct;
+      return { ...seg, dashArray, dashOffset };
+    });
 
   return (
     <svg viewBox="0 0 200 200" style={{ width: '100%' }}>
-      {/* 背景圓環 */}
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke="#0d1520" strokeWidth={strokeW} />
-      {/* 各板塊 */}
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke="#131f2e" strokeWidth={strokeW} />
       {slices.map((s, i) => (
         <circle key={i}
           cx={cx} cy={cy} r={r}
           fill="none"
           stroke={s.color}
           strokeWidth={strokeW}
-          strokeDasharray={`${circ * s.pct} ${circ}`}
-          strokeDashoffset={`${-circ * s.offset}`}
+          strokeDasharray={s.dashArray}
+          strokeDashoffset={s.dashOffset}
           transform={`rotate(-90 ${cx} ${cy})`}
           style={{ filter: `drop-shadow(0 0 6px ${s.color}60)` }}
         />
       ))}
-      {/* 中心文字 */}
       <text x={cx} y={cy - 8} textAnchor="middle" fill="#64748b" fontSize="10" fontFamily="DM Mono">淨資產</text>
       <text x={cx} y={cy + 10} textAnchor="middle" fill="#f1f5f9" fontSize="11" fontWeight="500" fontFamily="DM Mono">
         {total > 0 ? (total / 10000).toFixed(0) + '萬' : '--'}
@@ -246,7 +244,19 @@ function App() {
       acc[a.category] = (acc[a.category] || 0) + a.valueTWD;
       return acc;
     }, {})
-  ).map(([cat, value]) => ({ cat, value, ...CATEGORY_META[cat] }));
+  ).map(([cat, value]) => ({
+    cat,
+    value,
+    pct: totalAssets > 0 ? value / totalAssets : 0,
+    ...CATEGORY_META[cat],
+  }));
+
+  // 驗證加總
+  if (process && typeof console !== 'undefined') {
+    const pctSum = byCat.reduce((s, b) => s + b.pct, 0);
+    console.log('[byCat]', byCat.map(b => `${b.label} ${(b.pct*100).toFixed(1)}% NT$${Math.round(b.value).toLocaleString()}`));
+    console.log('[pct sum]', pctSum.toFixed(4));
+  }
 
   // 00631L再平衡
   const tw631 = enriched.find(a => a.symbol === '00631L');
@@ -320,7 +330,7 @@ function App() {
             {/* 圓餅圖卡片 */}
             <div style={{ ...s.card, padding: '20px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
               <div style={{ width: '100%', maxWidth: 160, marginBottom: 20 }}>
-                <DonutChart segments={byCat.map(b => ({ color: b.color, value: b.value }))} total={netWorth > 0 ? netWorth : totalAssets} />
+                <DonutChart segments={byCat.map(b => ({ color: b.color, value: b.value, pct: b.pct }))} total={netWorth > 0 ? netWorth : totalAssets} />
               </div>
               <div style={{ width: '100%', display: 'flex', flexDirection: 'column' }}>
                 {byCat.map((b, i) => (
@@ -361,7 +371,7 @@ function App() {
           <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: 16 }}>
             <div style={{ ...s.card, padding: 20, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
               <div style={{ width: '100%', maxWidth: 160, marginBottom: 20 }}>
-                <DonutChart segments={byCat.map(b => ({ color: b.color, value: b.value }))} total={netWorth > 0 ? netWorth : totalAssets} />
+                <DonutChart segments={byCat.map(b => ({ color: b.color, value: b.value, pct: b.pct }))} total={netWorth > 0 ? netWorth : totalAssets} />
               </div>
               <div style={{ width: '100%', display: 'flex', flexDirection: 'column' }}>
                 {byCat.map((b, i) => (
