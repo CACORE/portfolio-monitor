@@ -266,6 +266,21 @@ function App() {
     console.log('[pct sum]', pctSum.toFixed(4));
   }, [JSON.stringify(byCat)]);
 
+  // 季度再平衡日期
+  const getQuarterFirstWeekday = (year, month) => {
+    const d = new Date(year, month, 1);
+    while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1);
+    return d;
+  };
+  const today = new Date();
+  const qIdx = Math.floor(today.getMonth() / 3);
+  const qMonths = [0, 3, 6, 9];
+  const thisQDate = getQuarterFirstWeekday(today.getFullYear(), qMonths[qIdx]);
+  const nextQIdx = (qIdx + 1) % 4;
+  const nextQDate = getQuarterFirstWeekday(nextQIdx === 0 ? today.getFullYear() + 1 : today.getFullYear(), qMonths[nextQIdx]);
+  const isPastThisQ = today >= thisQDate;
+  const fmtDate = d => `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
+
   // 00631L再平衡
   const tw631 = enriched.find(a => a.symbol === '00631L');
   const cashAsset = enriched.find(a => a.symbol === 'CASH');
@@ -553,77 +568,130 @@ function App() {
       )}
 
       {/* ===== 再平衡 ===== */}
-      {tab === 'rebalance' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {/* 00631L 50/50 */}
-          <div style={{ ...s.card, padding: 24 }}>
-            <div style={{ fontFamily: 'Syne', fontSize: 16, fontWeight: 700, color: '#f1f5f9', marginBottom: 20 }}>
-              00631L 季度再平衡（目標 50/50）
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)', gap: 10, marginBottom: 20 }}>
-              {[
-                { label: '00631L 市值', value: fmtTWD(tw631Val), color: '#60a5fa' },
-                { label: '現金備用',    value: fmtTWD(cashVal),  color: '#94a3b8' },
-                { label: '台股總額',   value: fmtTWD(twTotal),  color: '#cbd5e1' },
-              ].map((c, i) => (
-                <div key={i} style={{ background: '#060a0f', borderRadius: 10, padding: '12px 16px', display: isMobile ? 'flex' : 'block', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ fontSize: 11, color: '#334155', marginBottom: isMobile ? 0 : 5 }}>{c.label}</div>
-                  <div style={{ fontSize: 16, color: c.color }}>{c.value}</div>
-                </div>
-              ))}
-            </div>
+      {tab === 'rebalance' && (() => {
+        const isUrgent  = twRatio < 0.30 || twRatio > 0.70;
+        const isWarning = !isUrgent && (twRatio < 0.45 || twRatio > 0.55);
+        const statusColor = isUrgent ? '#f87171' : isWarning ? '#f59e0b' : '#34d399';
+        const statusLabel = isUrgent ? '❗ 需立即再平衡' : isWarning ? '⚠️ 比例偏移中' : '✓ 比例平衡';
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-            {/* 比例條 */}
-            <div style={{ marginBottom: 20 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#334155', marginBottom: 6 }}>
-                <span>標的佔比 {(twRatio * 100).toFixed(1)}%</span>
-                <span>目標 50%</span>
-              </div>
-              <div style={{ background: '#060a0f', borderRadius: 4, height: 10, overflow: 'hidden', position: 'relative' }}>
-                <div style={{ height: '100%', width: (twRatio * 100) + '%', background: twRatio > 0.55 ? '#f59e0b' : twRatio < 0.45 ? '#60a5fa' : '#34d399', borderRadius: 4, transition: 'width .3s' }} />
-                <div style={{ position: 'absolute', top: 0, left: '50%', width: 1, height: '100%', background: '#1e3a5f' }} />
+            {/* 季度排程 */}
+            <div style={{ ...s.card, padding: 20 }}>
+              <div style={{ fontFamily: 'Syne', fontSize: 15, fontWeight: 700, color: '#f1f5f9', marginBottom: 14 }}>季度再平衡排程</div>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 10 }}>
+                <div style={{ background: '#060a0f', borderRadius: 10, padding: '12px 16px' }}>
+                  <div style={{ fontSize: 11, color: '#475569', marginBottom: 5 }}>本季開盤首日（Q{qIdx + 1}）</div>
+                  <div style={{ fontSize: 15, fontWeight: 500, color: isPastThisQ ? '#34d399' : '#f59e0b' }}>
+                    {fmtDate(thisQDate)} {isPastThisQ ? '· 已過' : '· 待執行'}
+                  </div>
+                </div>
+                <div style={{ background: '#060a0f', borderRadius: 10, padding: '12px 16px' }}>
+                  <div style={{ fontSize: 11, color: '#475569', marginBottom: 5 }}>下季開盤首日（Q{nextQIdx + 1 || 1}）</div>
+                  <div style={{ fontSize: 15, fontWeight: 500, color: '#60a5fa' }}>{fmtDate(nextQDate)}</div>
+                </div>
               </div>
             </div>
 
-            {/* 操作建議 */}
-            <div style={{ background: '#060a0f', borderRadius: 10, padding: '16px 20px' }}>
-              {Math.abs(rebalDiff) < 5000 ? (
-                <div style={{ color: '#34d399', fontSize: 13 }}>✓ 目前比例平衡，無需操作</div>
-              ) : rebalDiff > 0 ? (
-                <div>
-                  <div style={{ color: '#60a5fa', fontSize: 13, marginBottom: 6 }}>▲ 建議買進 00631L</div>
-                  <div style={{ color: '#f1f5f9', fontSize: 20, fontWeight: 500 }}>{fmtTWD(rebalDiff)}</div>
-                  <div style={{ color: '#334155', fontSize: 11, marginTop: 4 }}>從現金買入，使標的回到 50%</div>
+            {/* 00631L 50/50 */}
+            <div style={{ ...s.card, padding: 20 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+                <div style={{ fontFamily: 'Syne', fontSize: 15, fontWeight: 700, color: '#f1f5f9' }}>00631L / 現金</div>
+                <span style={{ padding: '3px 10px', borderRadius: 20, background: statusColor + '22', color: statusColor, fontSize: 12 }}>{statusLabel}</span>
+              </div>
+
+              {/* 數值 */}
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)', gap: 10, marginBottom: 18 }}>
+                {[
+                  { label: '00631L 市值', value: fmtTWD(tw631Val), color: '#60a5fa' },
+                  { label: '現金備用',    value: fmtTWD(cashVal),  color: '#94a3b8' },
+                  { label: '台股總額',    value: fmtTWD(twTotal),  color: '#cbd5e1' },
+                ].map((c, i) => (
+                  <div key={i} style={{ background: '#060a0f', borderRadius: 10, padding: '12px 16px', display: isMobile ? 'flex' : 'block', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ fontSize: 11, color: '#475569', marginBottom: isMobile ? 0 : 4 }}>{c.label}</div>
+                    <div style={{ fontSize: 15, color: c.color }}>{c.value}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* 4區間進度條 */}
+              <div style={{ marginBottom: 18 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 6 }}>
+                  <span style={{ color: statusColor, fontWeight: 500 }}>目前 {(twRatio * 100).toFixed(1)}%</span>
+                  <span style={{ color: '#475569' }}>目標 50%</span>
                 </div>
-              ) : (
-                <div>
-                  <div style={{ color: '#f59e0b', fontSize: 13, marginBottom: 6 }}>▼ 建議賣出 00631L</div>
-                  <div style={{ color: '#f1f5f9', fontSize: 20, fontWeight: 500 }}>{fmtTWD(Math.abs(rebalDiff))}</div>
-                  <div style={{ color: '#334155', fontSize: 11, marginTop: 4 }}>賣出轉入現金，使標的回到 50%</div>
+                <div style={{ position: 'relative', background: '#060a0f', borderRadius: 6, height: 12 }}>
+                  <div style={{ position: 'absolute', left: '0%',  width: '30%', height: '100%', background: '#f8717112', borderRadius: '6px 0 0 6px' }} />
+                  <div style={{ position: 'absolute', left: '30%', width: '20%', height: '100%', background: '#f59e0b12' }} />
+                  <div style={{ position: 'absolute', left: '50%', width: '20%', height: '100%', background: '#f59e0b12' }} />
+                  <div style={{ position: 'absolute', left: '70%', width: '30%', height: '100%', background: '#f8717112', borderRadius: '0 6px 6px 0' }} />
+                  <div style={{ position: 'absolute', left: 0, width: Math.min(twRatio * 100, 100) + '%', height: '100%', background: statusColor, borderRadius: 6, transition: 'width .3s', opacity: 0.9 }} />
+                  <div style={{ position: 'absolute', left: '50%', top: 0, width: 2, height: '100%', background: '#1e3a5f' }} />
+                </div>
+                <div style={{ display: 'flex', fontSize: 10, color: '#334155', marginTop: 5, position: 'relative', height: 14 }}>
+                  <span style={{ position: 'absolute', left: '30%', transform: 'translateX(-50%)' }}>30%</span>
+                  <span style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', color: '#475569' }}>50%</span>
+                  <span style={{ position: 'absolute', left: '70%', transform: 'translateX(-50%)' }}>70%</span>
+                </div>
+              </div>
+
+              {/* 提前警示 */}
+              {isUrgent && (
+                <div style={{ background: '#f871711a', border: '1px solid #f8717140', borderRadius: 10, padding: '14px 16px', marginBottom: 12 }}>
+                  <div style={{ color: '#f87171', fontSize: 13, fontWeight: 500, marginBottom: 4 }}>
+                    ❗ 比例 {(twRatio*100).toFixed(1)} / {(100-twRatio*100).toFixed(1)} 已觸發提前再平衡（閾值 70/30）
+                  </div>
+                  <div style={{ color: '#94a3b8', fontSize: 12 }}>建議不等季度，立即執行再平衡</div>
                 </div>
               )}
-            </div>
-          </div>
-
-          {/* 板塊佔比概覽 */}
-          <div style={{ ...s.card, padding: 24 }}>
-            <div style={{ fontFamily: 'Syne', fontSize: 16, fontWeight: 700, color: '#f1f5f9', marginBottom: 16 }}>板塊佔比</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {byCat.map(b => (
-                <div key={b.cat}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 5 }}>
-                    <span style={{ color: b.color }}>{b.label}</span>
-                    <span style={{ color: '#94a3b8' }}>{fmtTWD(b.value)} · {totalAssets > 0 ? ((b.value / totalAssets) * 100).toFixed(1) : 0}%</span>
-                  </div>
-                  <div style={{ background: '#060a0f', borderRadius: 3, height: 6 }}>
-                    <div style={{ height: '100%', width: totalAssets > 0 ? (b.value / totalAssets * 100) + '%' : '0%', background: b.color, borderRadius: 3, transition: 'width .3s', boxShadow: `0 0 6px ${b.color}60` }} />
+              {isWarning && (
+                <div style={{ background: '#f59e0b1a', border: '1px solid #f59e0b40', borderRadius: 10, padding: '14px 16px', marginBottom: 12 }}>
+                  <div style={{ color: '#f59e0b', fontSize: 13 }}>
+                    ⚠️ 比例 {(twRatio*100).toFixed(1)} / {(100-twRatio*100).toFixed(1)} 已偏離建議區間（45–55%）
                   </div>
                 </div>
-              ))}
+              )}
+
+              {/* 操作建議 */}
+              <div style={{ background: '#060a0f', borderRadius: 10, padding: '16px 18px' }}>
+                {Math.abs(rebalDiff) < 5000 ? (
+                  <div style={{ color: '#34d399', fontSize: 13 }}>✓ 目前比例平衡，無需操作</div>
+                ) : rebalDiff > 0 ? (
+                  <div>
+                    <div style={{ color: '#60a5fa', fontSize: 13, marginBottom: 6 }}>▲ 建議買進 00631L</div>
+                    <div style={{ color: '#f1f5f9', fontSize: 20, fontWeight: 500 }}>{fmtTWD(rebalDiff)}</div>
+                    <div style={{ color: '#475569', fontSize: 11, marginTop: 4 }}>從現金買入，使標的回到 50%</div>
+                  </div>
+                ) : (
+                  <div>
+                    <div style={{ color: '#f59e0b', fontSize: 13, marginBottom: 6 }}>▼ 建議賣出 00631L</div>
+                    <div style={{ color: '#f1f5f9', fontSize: 20, fontWeight: 500 }}>{fmtTWD(Math.abs(rebalDiff))}</div>
+                    <div style={{ color: '#475569', fontSize: 11, marginTop: 4 }}>賣出轉入現金，使標的回到 50%</div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* 板塊佔比 */}
+            <div style={{ ...s.card, padding: 20 }}>
+              <div style={{ fontFamily: 'Syne', fontSize: 15, fontWeight: 700, color: '#f1f5f9', marginBottom: 16 }}>板塊佔比</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {byCat.map(b => (
+                  <div key={b.cat}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 5 }}>
+                      <span style={{ color: b.color }}>{b.label}</span>
+                      <span style={{ color: '#94a3b8' }}>{fmtTWD(b.value)} · {(b.pct * 100).toFixed(1)}%</span>
+                    </div>
+                    <div style={{ background: '#060a0f', borderRadius: 3, height: 6 }}>
+                      <div style={{ height: '100%', width: (b.pct * 100) + '%', background: b.color, borderRadius: 3, transition: 'width .3s', boxShadow: `0 0 6px ${b.color}60` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ===== 編輯資產 Modal ===== */}
       {editAsset && (
