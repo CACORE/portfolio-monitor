@@ -1,3 +1,18 @@
+// ===== Telegram 推播 =====
+const TG_TOKEN   = '8209054446:AAF3MXVYTjS7aviPBVQaxruKo93rVOSeD6c';
+const TG_CHAT_ID = '7341232461';
+const ALERT_THROTTLE_MS = 4 * 60 * 60 * 1000; // 4 小時不重複
+
+async function sendTelegramAlert(text) {
+  try {
+    await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: TG_CHAT_ID, text, parse_mode: 'HTML' }),
+    });
+  } catch {}
+}
+
 // ===== 預設資料 =====
 const DEFAULT_ASSETS = [
   { id: 'btc',  category: 'crypto', symbol: 'BTC',     name: '比特幣',    qty: 0.16217047, priceSource: 'binance',  currency: 'USD' },
@@ -289,6 +304,25 @@ function App() {
   const twTotal = tw631Val + cashVal;
   const twRatio = twTotal > 0 ? tw631Val / twTotal : 0;
   const rebalDiff = twTotal * 0.5 - tw631Val;
+  const isUrgent  = twRatio < 0.30 || twRatio > 0.70;
+  const isWarning = !isUrgent && (twRatio < 0.45 || twRatio > 0.55);
+
+  // 危險區 → Telegram 推播（4 小時內不重複）
+  React.useEffect(() => {
+    if (!isUrgent || !lastUpdated) return;
+    const lastAlert = parseInt(loadLS('lastRebalAlert', '0'));
+    if (Date.now() - lastAlert < ALERT_THROTTLE_MS) return;
+    const side   = twRatio > 0.7 ? '00631L 持倉過多' : '現金比例過高';
+    const action = twRatio > 0.7 ? '▼ 建議賣出 00631L' : '▲ 建議買進 00631L';
+    const msg =
+      `<b>🚨 投資牛馬｜再平衡警示</b>\n\n` +
+      `台股比例：<b>${(twRatio*100).toFixed(1)}% / ${(100-twRatio*100).toFixed(1)}%</b>\n` +
+      `狀態：${side}（已觸發 70/30 危險區）\n\n` +
+      `${action} <b>${fmtTWD(Math.abs(rebalDiff))}</b>\n\n` +
+      `📅 ${lastUpdated.toLocaleString('zh-TW')}`;
+    sendTelegramAlert(msg);
+    saveLS('lastRebalAlert', Date.now().toString());
+  }, [isUrgent, lastUpdated]);
 
   // ===== UI =====
   const s = {
@@ -569,8 +603,6 @@ function App() {
 
       {/* ===== 再平衡 ===== */}
       {tab === 'rebalance' && (() => {
-        const isUrgent  = twRatio < 0.30 || twRatio > 0.70;
-        const isWarning = !isUrgent && (twRatio < 0.45 || twRatio > 0.55);
         const statusColor = isUrgent ? '#f87171' : isWarning ? '#f59e0b' : '#34d399';
         const statusLabel = isUrgent ? '❗ 需立即再平衡' : isWarning ? '⚠️ 比例偏移中' : '✓ 比例平衡';
         return (
@@ -587,7 +619,7 @@ function App() {
                   </div>
                 </div>
                 <div style={{ background: '#060a0f', borderRadius: 10, padding: '12px 16px' }}>
-                  <div style={{ fontSize: 11, color: '#475569', marginBottom: 5 }}>下季開盤首日（Q{nextQIdx + 1 || 1}）</div>
+                  <div style={{ fontSize: 11, color: '#475569', marginBottom: 5 }}>下季開盤首日（Q{nextQIdx === 0 ? 1 : nextQIdx + 1}）</div>
                   <div style={{ fontSize: 15, fontWeight: 500, color: '#60a5fa' }}>{fmtDate(nextQDate)}</div>
                 </div>
               </div>
