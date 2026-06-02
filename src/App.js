@@ -174,6 +174,13 @@ function App() {
   const [editAsset, setEditAsset] = React.useState(null);
   const [editLiability, setEditLiability] = React.useState(null);
   const [addMode, setAddMode] = React.useState(null); // 'asset' | 'liability'
+  const [windowWidth, setWindowWidth] = React.useState(window.innerWidth);
+  React.useEffect(() => {
+    const onResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  const isMobile = windowWidth < 640;
 
   React.useEffect(() => { saveLS('assets_v2', assets); }, [assets]);
   React.useEffect(() => { saveLS('liabilities_v2', liabilities); }, [liabilities]);
@@ -238,14 +245,14 @@ function App() {
     <div style={{ minHeight: '100vh', padding: '20px 16px', maxWidth: 960, margin: '0 auto' }}>
 
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
+      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'stretch' : 'flex-start', marginBottom: 24, gap: isMobile ? 12 : 0 }}>
         <div>
           <div style={{ fontFamily: 'Syne', fontSize: 24, fontWeight: 800, color: '#f1f5f9', letterSpacing: '-0.5px' }}>資產監控</div>
           <div style={{ fontSize: 11, color: '#334155', marginTop: 3 }}>
             {lastUpdated ? `更新於 ${lastUpdated.toLocaleTimeString('zh-TW')}` : '載入中...'}
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: isMobile ? 'space-between' : 'flex-end' }}>
           {loading && <span style={{ fontSize: 11, color: '#3b82f6', animation: 'pulse 1.5s infinite' }}>● 更新中</span>}
           <button onClick={refresh} disabled={loading} style={{ ...s.btn(false), color: '#60a5fa', borderColor: '#1e3a5f' }}>↻ 更新</button>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -257,21 +264,21 @@ function App() {
       </div>
 
       {/* Summary Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)', gap: 10, marginBottom: 20 }}>
         {[
           { label: '總資產', value: fmtTWD(totalAssets), color: '#60a5fa' },
           { label: '總負債', value: fmtTWD(totalLiabilities), color: '#f87171' },
           { label: '淨資產', value: fmtTWD(netWorth), color: netWorth >= 0 ? '#34d399' : '#f87171' },
         ].map((c, i) => (
-          <div key={i} style={{ ...s.card, padding: '14px 18px' }}>
-            <div style={{ fontSize: 11, color: '#334155', marginBottom: 6 }}>{c.label}</div>
-            <div style={{ fontSize: 18, fontWeight: 500, color: c.color, letterSpacing: '-0.3px' }}>{c.value}</div>
+          <div key={i} style={{ ...s.card, padding: isMobile ? '12px 16px' : '14px 18px', display: isMobile ? 'flex' : 'block', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ fontSize: 11, color: '#334155', marginBottom: isMobile ? 0 : 6 }}>{c.label}</div>
+            <div style={{ fontSize: isMobile ? 16 : 18, fontWeight: 500, color: c.color, letterSpacing: '-0.3px' }}>{c.value}</div>
           </div>
         ))}
       </div>
 
       {/* Nav Tabs */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
         {[['dashboard','總覽'], ['assets','資產'], ['liabilities','負債'], ['rebalance','再平衡']].map(([id, label]) => (
           <button key={id} onClick={() => setTab(id)} style={s.btn(tab === id)}>{label}</button>
         ))}
@@ -279,10 +286,12 @@ function App() {
 
       {/* ===== 總覽 ===== */}
       {tab === 'dashboard' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '180px 1fr', gap: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '180px 1fr', gap: 16 }}>
           {/* Donut */}
-          <div style={{ ...s.card, padding: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
-            <DonutChart segments={byCat.map(b => ({ color: b.color, value: b.value }))} total={netWorth > 0 ? netWorth : totalAssets} />
+          <div style={{ ...s.card, padding: 20, display: 'flex', flexDirection: isMobile ? 'row' : 'column', alignItems: 'center', gap: 16 }}>
+            <div style={{ flexShrink: 0, width: isMobile ? 110 : '100%' }}>
+              <DonutChart segments={byCat.map(b => ({ color: b.color, value: b.value }))} total={netWorth > 0 ? netWorth : totalAssets} />
+            </div>
             <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8 }}>
               {byCat.map((b, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -299,12 +308,12 @@ function App() {
           </div>
 
           {/* Asset rows */}
-          <div style={{ ...s.card, overflow: 'hidden' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+          <div style={{ ...s.card, overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: isMobile ? 11 : 12, minWidth: isMobile ? 420 : 'auto' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid #131f2e' }}>
-                  {['標的', '板塊', '數量', '單價(TWD)', '市值', '佔總資產'].map((h, i) => (
-                    <th key={i} style={{ padding: '11px 14px', textAlign: i >= 2 ? 'right' : 'left', color: '#334155', fontWeight: 400 }}>{h}</th>
+                  {['標的', '市值', '佔比', ...(isMobile ? [] : ['板塊', '數量', '單價(TWD)'])].map((h, i) => (
+                    <th key={i} style={{ padding: isMobile ? '10px 10px' : '11px 14px', textAlign: i >= (isMobile ? 1 : 2) ? 'right' : 'left', color: '#334155', fontWeight: 400, whiteSpace: 'nowrap' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -313,19 +322,21 @@ function App() {
                   <tr key={a.id} style={{ borderBottom: '1px solid #0d1520' }}
                     onMouseEnter={e => e.currentTarget.style.background = '#131f2e'}
                     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                    <td style={{ padding: '10px 14px' }}>
+                    <td style={{ padding: isMobile ? '9px 10px' : '10px 14px' }}>
                       <div style={{ color: '#f1f5f9', fontWeight: 500 }}>{a.symbol}</div>
                       <div style={{ fontSize: 10, color: '#334155' }}>{a.name}</div>
                     </td>
-                    <td style={{ padding: '10px 14px' }}>
-                      <span style={s.tag(CATEGORY_META[a.category]?.color || '#94a3b8')}>{CATEGORY_META[a.category]?.label}</span>
-                    </td>
-                    <td style={{ padding: '10px 14px', textAlign: 'right', color: '#94a3b8' }}>{fmtNum(a.qty, a.qty < 1 ? 8 : 2)}</td>
-                    <td style={{ padding: '10px 14px', textAlign: 'right', color: '#94a3b8' }}>{fmtNum(a.unitPrice, 0)}</td>
-                    <td style={{ padding: '10px 14px', textAlign: 'right', color: '#cbd5e1' }}>{fmtTWD(a.valueTWD)}</td>
-                    <td style={{ padding: '10px 14px', textAlign: 'right', color: '#475569' }}>
+                    <td style={{ padding: isMobile ? '9px 10px' : '10px 14px', textAlign: 'right', color: '#cbd5e1', whiteSpace: 'nowrap' }}>{fmtTWD(a.valueTWD)}</td>
+                    <td style={{ padding: isMobile ? '9px 10px' : '10px 14px', textAlign: 'right', color: '#475569', whiteSpace: 'nowrap' }}>
                       {totalAssets > 0 ? ((a.valueTWD / totalAssets) * 100).toFixed(1) + '%' : '--'}
                     </td>
+                    {!isMobile && <>
+                      <td style={{ padding: '10px 14px' }}>
+                        <span style={s.tag(CATEGORY_META[a.category]?.color || '#94a3b8')}>{CATEGORY_META[a.category]?.label}</span>
+                      </td>
+                      <td style={{ padding: '10px 14px', textAlign: 'right', color: '#94a3b8' }}>{fmtNum(a.qty, a.qty < 1 ? 8 : 2)}</td>
+                      <td style={{ padding: '10px 14px', textAlign: 'right', color: '#94a3b8' }}>{fmtNum(a.unitPrice, 0)}</td>
+                    </>}
                   </tr>
                 ))}
               </tbody>
@@ -341,34 +352,37 @@ function App() {
             <span style={{ fontSize: 13, color: '#94a3b8' }}>持倉管理</span>
             <button onClick={() => setAddMode('asset')} style={{ ...s.btn(true), color: '#93c5fd' }}>+ 新增</button>
           </div>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid #131f2e' }}>
-                {['代號', '名稱', '板塊', '數量', '報價來源', '市值', ''].map((h, i) => (
-                  <th key={i} style={{ padding: '11px 14px', textAlign: i >= 3 ? 'right' : 'left', color: '#334155', fontWeight: 400 }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {enriched.map(a => (
-                <tr key={a.id} style={{ borderBottom: '1px solid #0d1520' }}>
-                  <td style={{ padding: '10px 14px', color: '#f1f5f9', fontWeight: 500 }}>{a.symbol}</td>
-                  <td style={{ padding: '10px 14px', color: '#64748b' }}>{a.name}</td>
-                  <td style={{ padding: '10px 14px' }}><span style={s.tag(CATEGORY_META[a.category]?.color || '#94a3b8')}>{CATEGORY_META[a.category]?.label}</span></td>
-                  <td style={{ padding: '10px 14px', textAlign: 'right', color: '#94a3b8' }}>{fmtNum(a.qty, a.qty < 1 ? 8 : 2)}</td>
-                  <td style={{ padding: '10px 14px', textAlign: 'right', color: '#334155' }}>{a.priceSource}</td>
-                  <td style={{ padding: '10px 14px', textAlign: 'right', color: '#cbd5e1' }}>{fmtTWD(a.valueTWD)}</td>
-                  <td style={{ padding: '10px 14px', textAlign: 'right' }}>
-                    <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-                      <button onClick={() => setEditAsset(a)} style={{ ...s.btn(false), padding: '4px 10px' }}>編輯</button>
-                      <button onClick={() => setAssets(as => as.filter(x => x.id !== a.id))}
-                        style={{ ...s.btn(false), padding: '4px 10px', color: '#f87171', borderColor: '#3f1010' }}>刪除</button>
-                    </div>
-                  </td>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 480 }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid #131f2e' }}>
+                  {['代號', '名稱', '數量', '市值', ''].map((h, i) => (
+                    <th key={i} style={{ padding: '11px 14px', textAlign: i >= 2 ? 'right' : 'left', color: '#334155', fontWeight: 400, whiteSpace: 'nowrap' }}>{h}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {enriched.map(a => (
+                  <tr key={a.id} style={{ borderBottom: '1px solid #0d1520' }}>
+                    <td style={{ padding: '10px 14px' }}>
+                      <div style={{ color: '#f1f5f9', fontWeight: 500 }}>{a.symbol}</div>
+                      <div style={{ fontSize: 10, color: '#334155' }}>{CATEGORY_META[a.category]?.label}</div>
+                    </td>
+                    <td style={{ padding: '10px 14px', color: '#64748b', fontSize: 11 }}>{a.name}</td>
+                    <td style={{ padding: '10px 14px', textAlign: 'right', color: '#94a3b8', whiteSpace: 'nowrap' }}>{fmtNum(a.qty, a.qty < 1 ? 8 : 2)}</td>
+                    <td style={{ padding: '10px 14px', textAlign: 'right', color: '#cbd5e1', whiteSpace: 'nowrap' }}>{fmtTWD(a.valueTWD)}</td>
+                    <td style={{ padding: '10px 14px', textAlign: 'right' }}>
+                      <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                        <button onClick={() => setEditAsset(a)} style={{ ...s.btn(false), padding: '4px 10px' }}>編輯</button>
+                        <button onClick={() => setAssets(as => as.filter(x => x.id !== a.id))}
+                          style={{ ...s.btn(false), padding: '4px 10px', color: '#f87171', borderColor: '#3f1010' }}>刪</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -379,41 +393,45 @@ function App() {
             <span style={{ fontSize: 13, color: '#94a3b8' }}>負債管理</span>
             <button onClick={() => setAddMode('liability')} style={{ ...s.btn(true), color: '#93c5fd' }}>+ 新增</button>
           </div>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid #131f2e' }}>
-                {['名稱', '金額', '幣別', '換算台幣', ''].map((h, i) => (
-                  <th key={i} style={{ padding: '11px 14px', textAlign: i >= 1 ? 'right' : 'left', color: '#334155', fontWeight: 400 }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {liabilities.map(l => {
-                const rate = l.currency === 'USD' ? usdRate : 1;
-                const valueTWD = l.qty * rate;
-                return (
-                  <tr key={l.id} style={{ borderBottom: '1px solid #0d1520' }}>
-                    <td style={{ padding: '10px 14px', color: '#f1f5f9' }}>{l.name}</td>
-                    <td style={{ padding: '10px 14px', textAlign: 'right', color: '#f87171' }}>{fmtNum(l.qty, 2)}</td>
-                    <td style={{ padding: '10px 14px', textAlign: 'right', color: '#334155' }}>{l.currency}</td>
-                    <td style={{ padding: '10px 14px', textAlign: 'right', color: '#f87171' }}>{fmtTWD(valueTWD)}</td>
-                    <td style={{ padding: '10px 14px', textAlign: 'right' }}>
-                      <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-                        <button onClick={() => setEditLiability(l)} style={{ ...s.btn(false), padding: '4px 10px' }}>編輯</button>
-                        <button onClick={() => setLiabilities(ls => ls.filter(x => x.id !== l.id))}
-                          style={{ ...s.btn(false), padding: '4px 10px', color: '#f87171', borderColor: '#3f1010' }}>刪除</button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-              <tr style={{ borderTop: '1px solid #1e3a5f' }}>
-                <td colSpan={3} style={{ padding: '12px 14px', color: '#475569', fontSize: 11 }}>負債合計</td>
-                <td style={{ padding: '12px 14px', textAlign: 'right', color: '#f87171', fontWeight: 500 }}>{fmtTWD(totalLiabilities)}</td>
-                <td />
-              </tr>
-            </tbody>
-          </table>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 360 }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid #131f2e' }}>
+                  {['名稱', '幣別', '換算台幣', ''].map((h, i) => (
+                    <th key={i} style={{ padding: '11px 14px', textAlign: i >= 1 ? 'right' : 'left', color: '#334155', fontWeight: 400, whiteSpace: 'nowrap' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {liabilities.map(l => {
+                  const rate = l.currency === 'USD' ? usdRate : 1;
+                  const valueTWD = l.qty * rate;
+                  return (
+                    <tr key={l.id} style={{ borderBottom: '1px solid #0d1520' }}>
+                      <td style={{ padding: '10px 14px' }}>
+                        <div style={{ color: '#f1f5f9' }}>{l.name}</div>
+                        <div style={{ fontSize: 10, color: '#f87171' }}>{fmtNum(l.qty, 2)} {l.currency}</div>
+                      </td>
+                      <td style={{ padding: '10px 14px', textAlign: 'right', color: '#334155', whiteSpace: 'nowrap' }}>{l.currency}</td>
+                      <td style={{ padding: '10px 14px', textAlign: 'right', color: '#f87171', whiteSpace: 'nowrap' }}>{fmtTWD(valueTWD)}</td>
+                      <td style={{ padding: '10px 14px', textAlign: 'right' }}>
+                        <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                          <button onClick={() => setEditLiability(l)} style={{ ...s.btn(false), padding: '4px 10px' }}>編輯</button>
+                          <button onClick={() => setLiabilities(ls => ls.filter(x => x.id !== l.id))}
+                            style={{ ...s.btn(false), padding: '4px 10px', color: '#f87171', borderColor: '#3f1010' }}>刪</button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+                <tr style={{ borderTop: '1px solid #1e3a5f' }}>
+                  <td colSpan={2} style={{ padding: '12px 14px', color: '#475569', fontSize: 11 }}>負債合計</td>
+                  <td style={{ padding: '12px 14px', textAlign: 'right', color: '#f87171', fontWeight: 500 }}>{fmtTWD(totalLiabilities)}</td>
+                  <td />
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -425,14 +443,14 @@ function App() {
             <div style={{ fontFamily: 'Syne', fontSize: 16, fontWeight: 700, color: '#f1f5f9', marginBottom: 20 }}>
               00631L 季度再平衡（目標 50/50）
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 20 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)', gap: 10, marginBottom: 20 }}>
               {[
                 { label: '00631L 市值', value: fmtTWD(tw631Val), color: '#60a5fa' },
                 { label: '現金備用',    value: fmtTWD(cashVal),  color: '#94a3b8' },
                 { label: '台股總額',   value: fmtTWD(twTotal),  color: '#cbd5e1' },
               ].map((c, i) => (
-                <div key={i} style={{ background: '#060a0f', borderRadius: 10, padding: '12px 16px' }}>
-                  <div style={{ fontSize: 11, color: '#334155', marginBottom: 5 }}>{c.label}</div>
+                <div key={i} style={{ background: '#060a0f', borderRadius: 10, padding: '12px 16px', display: isMobile ? 'flex' : 'block', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ fontSize: 11, color: '#334155', marginBottom: isMobile ? 0 : 5 }}>{c.label}</div>
                   <div style={{ fontSize: 16, color: c.color }}>{c.value}</div>
                 </div>
               ))}
