@@ -93,34 +93,42 @@ async function fetchAllPrices(assets, usdRate) {
 
 // ===== 甜甜圈圖 =====
 function DonutChart({ segments, total }) {
-  const cx = 100, cy = 100, r = 70, strokeW = 24;
-  const circumference = 2 * Math.PI * r; // ≈ 439.8
+  const cx = 100, cy = 100, r = 85, holeR = 57;
 
-  let cumulativePct = 0;
+  function polarToXY(angleDeg) {
+    const rad = (angleDeg - 90) * Math.PI / 180;
+    return [cx + r * Math.cos(rad), cy + r * Math.sin(rad)];
+  }
+
+  let cumAngle = 0;
   const slices = segments
     .filter(s => s.pct > 0)
     .map(seg => {
-      const dashArray = (seg.pct * circumference) + ' ' + circumference;
-      const dashOffset = circumference - (cumulativePct * circumference);
-      cumulativePct += seg.pct;
-      return { ...seg, dashArray, dashOffset };
+      const startAngle = cumAngle;
+      const sweep = seg.pct * 360;
+      cumAngle += sweep;
+      return { ...seg, startAngle, endAngle: cumAngle, sweep };
     });
 
   return (
     <svg viewBox="0 0 200 200" style={{ width: '100%' }}>
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke="#131f2e" strokeWidth={strokeW} />
-      {slices.map((s, i) => (
-        <circle key={i}
-          cx={cx} cy={cy} r={r}
-          fill="none"
-          stroke={s.color}
-          strokeWidth={strokeW}
-          strokeDasharray={s.dashArray}
-          strokeDashoffset={s.dashOffset}
-          transform={`rotate(-90 ${cx} ${cy})`}
-          style={{ filter: `drop-shadow(0 0 6px ${s.color}60)` }}
-        />
-      ))}
+      {slices.map((s, i) => {
+        if (s.sweep >= 359.99) {
+          return <circle key={i} cx={cx} cy={cy} r={r} fill={s.color} />;
+        }
+        const [x1, y1] = polarToXY(s.startAngle);
+        const [x2, y2] = polarToXY(s.endAngle);
+        const large = s.sweep > 180 ? 1 : 0;
+        return (
+          <path key={i}
+            d={`M ${cx} ${cy} L ${x1.toFixed(2)} ${y1.toFixed(2)} A ${r} ${r} 0 ${large} 1 ${x2.toFixed(2)} ${y2.toFixed(2)} Z`}
+            fill={s.color}
+            style={{ filter: `drop-shadow(0 0 5px ${s.color}70)` }}
+          />
+        );
+      })}
+      {/* 中心圓蓋成甜甜圈 */}
+      <circle cx={cx} cy={cy} r={holeR} fill="#060a0f" />
       <text x={cx} y={cy - 8} textAnchor="middle" fill="#64748b" fontSize="10" fontFamily="DM Mono">淨資產</text>
       <text x={cx} y={cy + 10} textAnchor="middle" fill="#f1f5f9" fontSize="11" fontWeight="500" fontFamily="DM Mono">
         {total > 0 ? (total / 10000).toFixed(0) + '萬' : '--'}
