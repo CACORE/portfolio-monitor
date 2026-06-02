@@ -117,7 +117,7 @@ function DonutChart({ segments, total }) {
           stroke={s.color}
           strokeWidth={strokeW}
           strokeDasharray={`${circ * s.pct} ${circ}`}
-          strokeDashoffset={-circ * s.offset}
+          strokeDashoffset={circ - circ * s.offset}
           transform={`rotate(-90 ${cx} ${cy})`}
           style={{ filter: `drop-shadow(0 0 6px ${s.color}60)` }}
         />
@@ -128,6 +128,30 @@ function DonutChart({ segments, total }) {
         {total > 0 ? (total / 10000).toFixed(0) + '萬' : '--'}
       </text>
     </svg>
+  );
+}
+
+// ===== 負債長條 =====
+function LiabilityBar({ totalAssets, totalLiabilities, netWorth, fmtTWD }) {
+  const liabPct = totalAssets > 0 ? Math.min((totalLiabilities / totalAssets) * 100, 100) : 0;
+  return (
+    <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid #131f2e' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+        <span style={{ fontSize: 11, color: '#475569' }}>總資產</span>
+        <span style={{ fontSize: 11, color: '#60a5fa' }}>{fmtTWD(totalAssets)}</span>
+      </div>
+      <div style={{ background: '#131f2e', borderRadius: 4, height: 8, marginBottom: 8, overflow: 'hidden' }}>
+        <div style={{ height: '100%', width: liabPct + '%', background: '#f87171', borderRadius: 4, transition: 'width .3s', boxShadow: '0 0 6px #f8717160' }} />
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+        <span style={{ fontSize: 11, color: '#475569' }}>總負債 <span style={{ color: '#334155' }}>({liabPct.toFixed(1)}%)</span></span>
+        <span style={{ fontSize: 11, color: '#f87171' }}>{fmtTWD(totalLiabilities)}</span>
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+        <span style={{ fontSize: 11, color: '#475569' }}>淨資產</span>
+        <span style={{ fontSize: 11, color: netWorth >= 0 ? '#34d399' : '#f87171', fontWeight: 500 }}>{fmtTWD(netWorth)}</span>
+      </div>
+    </div>
   );
 }
 
@@ -311,6 +335,7 @@ function App() {
                   </div>
                 ))}
               </div>
+              <LiabilityBar totalAssets={totalAssets} totalLiabilities={totalLiabilities} netWorth={netWorth} fmtTWD={fmtTWD} />
             </div>
 
             {/* 資產清單（card 列） */}
@@ -351,6 +376,7 @@ function App() {
                   </div>
                 ))}
               </div>
+              <LiabilityBar totalAssets={totalAssets} totalLiabilities={totalLiabilities} netWorth={netWorth} fmtTWD={fmtTWD} />
             </div>
             <div style={{ ...s.card, overflow: 'hidden' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
