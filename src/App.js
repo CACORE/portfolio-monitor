@@ -290,20 +290,18 @@ function App() {
           /* ── 手機版：上下疊排 ── */
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {/* 圓餅圖卡片 */}
-            <div style={{ ...s.card, padding: '20px 16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
-                <div style={{ width: 160 }}>
-                  <DonutChart segments={byCat.map(b => ({ color: b.color, value: b.value }))} total={netWorth > 0 ? netWorth : totalAssets} />
-                </div>
+            <div style={{ ...s.card, padding: '20px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <div style={{ width: '100%', maxWidth: 160, marginBottom: 20 }}>
+                <DonutChart segments={byCat.map(b => ({ color: b.color, value: b.value }))} total={netWorth > 0 ? netWorth : totalAssets} />
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 12px' }}>
+              <div style={{ width: '100%', display: 'flex', flexDirection: 'column' }}>
                 {byCat.map((b, i) => (
-                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                      <div style={{ width: 6, height: 6, borderRadius: '50%', background: b.color, flexShrink: 0 }} />
-                      <span style={{ fontSize: 11, color: '#64748b' }}>{b.label}</span>
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: i < byCat.length - 1 ? '1px solid #0d1520' : 'none', lineHeight: 1.4 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: b.color, flexShrink: 0 }} />
+                      <span style={{ fontSize: 12, color: '#94a3b8' }}>{b.label}</span>
                     </div>
-                    <span style={{ fontSize: 11, color: '#cbd5e1', marginLeft: 4 }}>
+                    <span style={{ fontSize: 12, color: '#cbd5e1', fontWeight: 500 }}>
                       {totalAssets > 0 ? ((b.value / totalAssets) * 100).toFixed(1) : 0}%
                     </span>
                   </div>
@@ -332,16 +330,18 @@ function App() {
         ) : (
           /* ── 桌面版：左側 donut + 右側 table ── */
           <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: 16 }}>
-            <div style={{ ...s.card, padding: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
-              <DonutChart segments={byCat.map(b => ({ color: b.color, value: b.value }))} total={netWorth > 0 ? netWorth : totalAssets} />
-              <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ ...s.card, padding: 20, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <div style={{ width: '100%', maxWidth: 160, marginBottom: 20 }}>
+                <DonutChart segments={byCat.map(b => ({ color: b.color, value: b.value }))} total={netWorth > 0 ? netWorth : totalAssets} />
+              </div>
+              <div style={{ width: '100%', display: 'flex', flexDirection: 'column' }}>
                 {byCat.map((b, i) => (
-                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <div style={{ width: 7, height: 7, borderRadius: '50%', background: b.color }} />
-                      <span style={{ fontSize: 11, color: '#64748b' }}>{b.label}</span>
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: i < byCat.length - 1 ? '1px solid #0d1520' : 'none', lineHeight: 1.4 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: b.color, flexShrink: 0 }} />
+                      <span style={{ fontSize: 12, color: '#94a3b8' }}>{b.label}</span>
                     </div>
-                    <span style={{ fontSize: 11, color: '#cbd5e1' }}>
+                    <span style={{ fontSize: 12, color: '#cbd5e1', fontWeight: 500 }}>
                       {totalAssets > 0 ? ((b.value / totalAssets) * 100).toFixed(1) : 0}%
                     </span>
                   </div>
@@ -387,41 +387,71 @@ function App() {
       {/* ===== 資產管理 ===== */}
       {tab === 'assets' && (
         <div style={s.card}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 18px', borderBottom: '1px solid #131f2e' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderBottom: '1px solid #131f2e' }}>
             <span style={{ fontSize: 13, color: '#94a3b8' }}>持倉管理</span>
             <button onClick={() => setAddMode('asset')} style={{ ...s.btn(true), color: '#93c5fd' }}>+ 新增</button>
           </div>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 480 }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid #131f2e' }}>
-                  {['代號', '名稱', '數量', '市值', ''].map((h, i) => (
-                    <th key={i} style={{ padding: '11px 14px', textAlign: i >= 2 ? 'right' : 'left', color: '#334155', fontWeight: 400, whiteSpace: 'nowrap' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {enriched.map(a => (
-                  <tr key={a.id} style={{ borderBottom: '1px solid #0d1520' }}>
-                    <td style={{ padding: '10px 14px' }}>
-                      <div style={{ color: '#f1f5f9', fontWeight: 500 }}>{a.symbol}</div>
-                      <div style={{ fontSize: 10, color: '#334155' }}>{CATEGORY_META[a.category]?.label}</div>
-                    </td>
-                    <td style={{ padding: '10px 14px', color: '#64748b', fontSize: 11 }}>{a.name}</td>
-                    <td style={{ padding: '10px 14px', textAlign: 'right', color: '#94a3b8', whiteSpace: 'nowrap' }}>{fmtNum(a.qty, a.qty < 1 ? 8 : 2)}</td>
-                    <td style={{ padding: '10px 14px', textAlign: 'right', color: '#cbd5e1', whiteSpace: 'nowrap' }}>{fmtTWD(a.valueTWD)}</td>
-                    <td style={{ padding: '10px 14px', textAlign: 'right' }}>
-                      <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-                        <button onClick={() => setEditAsset(a)} style={{ ...s.btn(false), padding: '4px 10px' }}>編輯</button>
-                        <button onClick={() => setAssets(as => as.filter(x => x.id !== a.id))}
-                          style={{ ...s.btn(false), padding: '4px 10px', color: '#f87171', borderColor: '#3f1010' }}>刪</button>
-                      </div>
-                    </td>
+          {isMobile ? (
+            /* 手機版：card list */
+            enriched.map((a, i) => (
+              <div key={a.id} style={{ padding: '14px 16px', borderBottom: i < enriched.length - 1 ? '1px solid #0d1520' : 'none' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                  <div>
+                    <div style={{ color: '#f1f5f9', fontWeight: 500, fontSize: 14 }}>{a.symbol}</div>
+                    <div style={{ fontSize: 11, color: '#475569', marginTop: 2 }}>{a.name}</div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ color: '#cbd5e1', fontSize: 14 }}>{fmtTWD(a.valueTWD)}</div>
+                    <div style={{ fontSize: 11, color: '#475569', marginTop: 2 }}>
+                      {totalAssets > 0 ? ((a.valueTWD / totalAssets) * 100).toFixed(1) + '%' : '--'}
+                    </div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <span style={s.tag(CATEGORY_META[a.category]?.color || '#94a3b8')}>{CATEGORY_META[a.category]?.label}</span>
+                    <span style={{ fontSize: 11, color: '#334155' }}>數量 {fmtNum(a.qty, a.qty < 1 ? 6 : 2)}</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button onClick={() => setEditAsset(a)} style={{ ...s.btn(false), padding: '4px 12px', fontSize: 12 }}>編輯</button>
+                    <button onClick={() => setAssets(as => as.filter(x => x.id !== a.id))}
+                      style={{ ...s.btn(false), padding: '4px 12px', fontSize: 12, color: '#f87171', borderColor: '#3f1010' }}>刪除</button>
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            /* 桌面版：table */
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid #131f2e' }}>
+                    {['代號', '名稱', '板塊', '數量', '市值', ''].map((h, i) => (
+                      <th key={i} style={{ padding: '11px 14px', textAlign: i >= 3 ? 'right' : 'left', color: '#334155', fontWeight: 400 }}>{h}</th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {enriched.map(a => (
+                    <tr key={a.id} style={{ borderBottom: '1px solid #0d1520' }}>
+                      <td style={{ padding: '10px 14px', color: '#f1f5f9', fontWeight: 500 }}>{a.symbol}</td>
+                      <td style={{ padding: '10px 14px', color: '#64748b' }}>{a.name}</td>
+                      <td style={{ padding: '10px 14px' }}><span style={s.tag(CATEGORY_META[a.category]?.color || '#94a3b8')}>{CATEGORY_META[a.category]?.label}</span></td>
+                      <td style={{ padding: '10px 14px', textAlign: 'right', color: '#94a3b8' }}>{fmtNum(a.qty, a.qty < 1 ? 8 : 2)}</td>
+                      <td style={{ padding: '10px 14px', textAlign: 'right', color: '#cbd5e1' }}>{fmtTWD(a.valueTWD)}</td>
+                      <td style={{ padding: '10px 14px', textAlign: 'right' }}>
+                        <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                          <button onClick={() => setEditAsset(a)} style={{ ...s.btn(false), padding: '4px 10px' }}>編輯</button>
+                          <button onClick={() => setAssets(as => as.filter(x => x.id !== a.id))}
+                            style={{ ...s.btn(false), padding: '4px 10px', color: '#f87171', borderColor: '#3f1010' }}>刪除</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
