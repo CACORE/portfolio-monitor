@@ -93,32 +93,36 @@ async function fetchAllPrices(assets, usdRate) {
 
 // ===== 甜甜圈圖 =====
 function DonutChart({ segments, total }) {
-  const cx = 100, cy = 100, r = 72, stroke = 26;
-  let cum = 0;
-  const slices = segments.filter(s => s.value > 0).map(s => {
+  const cx = 100, cy = 100, r = 70, strokeW = 24;
+  const circ = 2 * Math.PI * r; // ≈ 439.82
+
+  const slices = [];
+  let offset = 0;
+  segments.forEach(s => {
+    if (s.value <= 0) return;
     const pct = s.value / total;
-    const start = cum;
-    cum += pct;
-    return { ...s, pct, start };
+    slices.push({ ...s, pct, offset });
+    offset += pct;
   });
 
-  const arc = (start, end) => {
-    const a1 = (start * 360 - 90) * Math.PI / 180;
-    const a2 = (end * 360 - 90) * Math.PI / 180;
-    const x1 = cx + r * Math.cos(a1), y1 = cy + r * Math.sin(a1);
-    const x2 = cx + r * Math.cos(a2), y2 = cy + r * Math.sin(a2);
-    const large = end - start > 0.5 ? 1 : 0;
-    return `M ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2}`;
-  };
-
   return (
-    <svg viewBox="0 0 200 200" style={{ width: '100%', maxWidth: 180 }}>
+    <svg viewBox="0 0 200 200" style={{ width: '100%' }}>
+      {/* 背景圓環 */}
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke="#0d1520" strokeWidth={strokeW} />
+      {/* 各板塊 */}
       {slices.map((s, i) => (
-        <path key={i} d={arc(s.start, s.start + s.pct - 0.002)}
-          fill="none" stroke={s.color} strokeWidth={stroke} strokeLinecap="butt"
-          style={{ filter: `drop-shadow(0 0 8px ${s.color}50)` }} />
+        <circle key={i}
+          cx={cx} cy={cy} r={r}
+          fill="none"
+          stroke={s.color}
+          strokeWidth={strokeW}
+          strokeDasharray={`${circ * s.pct} ${circ}`}
+          strokeDashoffset={-circ * s.offset}
+          transform={`rotate(-90 ${cx} ${cy})`}
+          style={{ filter: `drop-shadow(0 0 6px ${s.color}60)` }}
+        />
       ))}
-      <circle cx={cx} cy={cy} r={r - stroke / 2 - 2} fill="#060a0f" />
+      {/* 中心文字 */}
       <text x={cx} y={cy - 8} textAnchor="middle" fill="#64748b" fontSize="10" fontFamily="DM Mono">淨資產</text>
       <text x={cx} y={cy + 10} textAnchor="middle" fill="#f1f5f9" fontSize="11" fontWeight="500" fontFamily="DM Mono">
         {total > 0 ? (total / 10000).toFixed(0) + '萬' : '--'}
