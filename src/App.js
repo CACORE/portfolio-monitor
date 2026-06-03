@@ -898,32 +898,30 @@ function App() {
 }
 
 // ===== 密碼鎖 =====
-async function sha256(text) {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+function pwHash(s) {
+  // btoa 簡易雜湊，足夠擋住一般人
+  return btoa(unescape(encodeURIComponent('pm:' + s)));
 }
 
 function PasswordGate({ children }) {
-  const storedHash = loadLS('pwHash', '');
   const [authed, setAuthed] = React.useState(() => sessionStorage.getItem('authed') === '1');
-  const [input, setInput] = React.useState('');
-  const [error, setError] = React.useState('');
-  const [isSetup, setIsSetup] = React.useState(!storedHash);
+  const [input, setInput]   = React.useState('');
   const [confirm, setConfirm] = React.useState('');
+  const [error, setError]   = React.useState('');
+  const hasHash = !!loadLS('pwHash', '');
 
   if (authed) return children;
 
-  const handleSetup = async () => {
+  const doSetup = () => {
     if (input.length < 4) { setError('密碼至少 4 個字元'); return; }
     if (input !== confirm) { setError('兩次輸入不一致'); return; }
-    saveLS('pwHash', await sha256(input));
+    saveLS('pwHash', pwHash(input));
     sessionStorage.setItem('authed', '1');
     setAuthed(true);
   };
 
-  const handleLogin = async () => {
-    const hash = await sha256(input);
-    if (hash === loadLS('pwHash', '')) {
+  const doLogin = () => {
+    if (pwHash(input) === loadLS('pwHash', '')) {
       sessionStorage.setItem('authed', '1');
       setAuthed(true);
     } else {
@@ -932,6 +930,7 @@ function PasswordGate({ children }) {
     }
   };
 
+  const onKey = (e) => { if (e.key === 'Enter') hasHash ? doLogin() : doSetup(); };
   const inp = { width: '100%', background: '#131f2e', border: '1px solid #1e3a5f', borderRadius: 8, padding: '10px 14px', color: '#e2e8f0', fontFamily: 'DM Mono', fontSize: 14, outline: 'none', marginBottom: 12 };
   const btn = { width: '100%', background: '#3b82f6', border: 'none', borderRadius: 8, padding: '10px', color: '#fff', fontFamily: 'DM Mono', fontSize: 14, fontWeight: 500, cursor: 'pointer' };
 
@@ -939,24 +938,20 @@ function PasswordGate({ children }) {
     <div style={{ minHeight: '100vh', background: '#060a0f', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
       <div style={{ background: '#0d1520', border: '1px solid #1e3a5f', borderRadius: 16, width: '100%', maxWidth: 360, padding: 32 }}>
         <div style={{ fontFamily: 'Syne', fontSize: 22, fontWeight: 800, color: '#f1f5f9', marginBottom: 6 }}>資產監控</div>
-        <div style={{ fontSize: 12, color: '#475569', marginBottom: 28 }}>{isSetup ? '首次使用，請設定密碼' : '請輸入密碼'}</div>
+        <div style={{ fontSize: 12, color: '#475569', marginBottom: 24 }}>{hasHash ? '請輸入密碼' : '首次使用，請設定密碼'}</div>
         <input type="password" value={input} onChange={e => { setInput(e.target.value); setError(''); }}
-          onKeyDown={e => e.key === 'Enter' && (isSetup ? handleSetup() : handleLogin())}
-          placeholder={isSetup ? '設定密碼' : '密碼'} style={inp} autoFocus />
-        {isSetup && (
+          onKeyDown={onKey} placeholder={hasHash ? '密碼' : '設定密碼'} style={inp} autoFocus />
+        {!hasHash && (
           <input type="password" value={confirm} onChange={e => { setConfirm(e.target.value); setError(''); }}
-            onKeyDown={e => e.key === 'Enter' && handleSetup()}
-            placeholder="確認密碼" style={inp} />
+            onKeyDown={onKey} placeholder="確認密碼" style={inp} />
         )}
         {error && <div style={{ color: '#f87171', fontSize: 12, marginBottom: 12 }}>{error}</div>}
-        <button onClick={isSetup ? handleSetup : handleLogin} style={btn}>
-          {isSetup ? '設定並進入' : '進入'}
+        <button onClick={hasHash ? doLogin : doSetup} style={btn}>
+          {hasHash ? '進入' : '設定並進入'}
         </button>
       </div>
     </div>
   );
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(
-  React.createElement(PasswordGate, null, React.createElement(App))
-);
+ReactDOM.createRoot(document.getElementById('root')).render(<PasswordGate><App /></PasswordGate>);
