@@ -1,0 +1,92 @@
+{
+  "assets": [
+    {
+      "id": "btc",
+      "category": "crypto",
+      "symbol": "BTC",
+      "name": "比特幣",
+      "qty": 0.16217047,
+      "priceSource": "binance",
+      "currency": "USD"
+    },
+    {
+      "id": "bnb",
+      "category": "crypto",
+      "symbol": "BNB",
+      "name": "幣安幣",
+      "qty": 3.29943355,
+      "priceSource": "binance",
+      "currency": "USD"
+    },
+    {
+      "id": "bgb",
+      "category": "crypto",
+      "symbol": "BGB",
+      "name": "Bitget Token",
+      "qty": 340.1,
+      "priceSource": "bitget",
+      "currency": "USD"
+    },
+    {
+      "id": "usd",
+      "category": "lending",
+      "symbol": "USD",
+      "name": "美元放貸",
+      "qty": 3246.02,
+      "priceSource": "fixed",
+      "currency": "USD"
+    },
+    {
+      "id": "tw1",
+      "category": "tw",
+      "symbol": "00631L",
+      "name": "元大台灣50正2",
+      "qty": 5000,
+      "priceSource": "twse",
+      "currency": "TWD",
+      "unitPrice": 1,
+      "valueTWD": 0
+    },
+    {
+      "id": "cash",
+      "category": "cash",
+      "symbol": "CASH",
+      "name": "台股備用現金",
+      "qty": 300000,
+      "priceSource": "fixed",
+      "currency": "TWD"
+    }
+  ],
+  "liabilities": [
+    {
+      "id": "usdt1",
+      "symbol": "USDT",
+      "name": "USDT借貸 1",
+      "qty": 5622.09,
+      "currency": "USD"
+    },
+    {
+      "id": "usdt2",
+      "symbol": "USDT",
+      "name": "USDT借貸 2",
+      "qty": 605.3888,
+      "currency": "USD"
+    },
+    {
+      "id": "usdt3",
+      "symbol": "USDT",
+      "name": "USDT借貸 3",
+      "qty": 204.68,
+      "currency": "USD"
+    },
+    {
+      "id": "twd1",
+      "symbol": "TWD",
+      "name": "台幣信貸",
+      "qty": 436894,
+      "currency": "TWD"
+    }
+  ],
+  "usdRate": 32.5,
+  "updatedAt": "2026-06-03T04:51:57.444Z"
+}
