@@ -512,6 +512,7 @@ function App() {
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                     <span style={s.tag(CATEGORY_META[a.category]?.color || '#94a3b8')}>{CATEGORY_META[a.category]?.label}</span>
                     <span style={{ fontSize: 11, color: '#334155' }}>數量 {fmtNum(a.qty, a.qty < 1 ? 6 : 2)}</span>
+                    <span style={{ fontSize: 11, color: '#475569' }}>單價 {fmtNum(a.unitPrice, a.unitPrice < 100 ? 2 : 0)}</span>
                   </div>
                   <div style={{ display: 'flex', gap: 6 }}>
                     <button onClick={() => setEditAsset(a)} style={{ ...s.btn(false), padding: '4px 12px', fontSize: 12 }}>編輯</button>
@@ -527,7 +528,7 @@ function App() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid #131f2e' }}>
-                    {['代號', '名稱', '板塊', '數量', '市值', ''].map((h, i) => (
+                    {['代號', '名稱', '板塊', '數量', '單價(TWD)', '市值', ''].map((h, i) => (
                       <th key={i} style={{ padding: '11px 14px', textAlign: i >= 3 ? 'right' : 'left', color: '#334155', fontWeight: 400 }}>{h}</th>
                     ))}
                   </tr>
@@ -539,6 +540,7 @@ function App() {
                       <td style={{ padding: '10px 14px', color: '#64748b' }}>{a.name}</td>
                       <td style={{ padding: '10px 14px' }}><span style={s.tag(CATEGORY_META[a.category]?.color || '#94a3b8')}>{CATEGORY_META[a.category]?.label}</span></td>
                       <td style={{ padding: '10px 14px', textAlign: 'right', color: '#94a3b8' }}>{fmtNum(a.qty, a.qty < 1 ? 8 : 2)}</td>
+                      <td style={{ padding: '10px 14px', textAlign: 'right', color: '#94a3b8' }}>{fmtNum(a.unitPrice, a.unitPrice < 100 ? 2 : 0)}</td>
                       <td style={{ padding: '10px 14px', textAlign: 'right', color: '#cbd5e1' }}>{fmtTWD(a.valueTWD)}</td>
                       <td style={{ padding: '10px 14px', textAlign: 'right' }}>
                         <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
