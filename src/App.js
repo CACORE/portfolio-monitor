@@ -420,7 +420,7 @@ function App() {
                   <div style={{ textAlign: 'right' }}>
                     <div style={{ color: '#cbd5e1', fontSize: 13 }}>{fmtTWD(a.valueTWD)}</div>
                     <div style={{ fontSize: 10, color: '#475569', marginTop: 2 }}>
-                      {totalAssets > 0 ? ((a.valueTWD / totalAssets) * 100).toFixed(1) + '%' : '--'}
+                      單價 {fmtNum(a.unitPrice, 2)} · {totalAssets > 0 ? ((a.valueTWD / totalAssets) * 100).toFixed(1) + '%' : '--'}
                     </div>
                   </div>
                 </div>
