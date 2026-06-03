@@ -471,7 +471,7 @@ function App() {
                         <span style={s.tag(CATEGORY_META[a.category]?.color || '#94a3b8')}>{CATEGORY_META[a.category]?.label}</span>
                       </td>
                       <td style={{ padding: '10px 14px', textAlign: 'right', color: '#94a3b8' }}>{fmtNum(a.qty, a.qty < 1 ? 8 : 2)}</td>
-                      <td style={{ padding: '10px 14px', textAlign: 'right', color: '#94a3b8' }}>{fmtNum(a.unitPrice, 0)}</td>
+                      <td style={{ padding: '10px 14px', textAlign: 'right', color: '#94a3b8' }}>{fmtNum(a.unitPrice, 2)}</td>
                       <td style={{ padding: '10px 14px', textAlign: 'right', color: '#cbd5e1' }}>{fmtTWD(a.valueTWD)}</td>
                       <td style={{ padding: '10px 14px', textAlign: 'right', color: '#475569' }}>
                         {totalAssets > 0 ? ((a.valueTWD / totalAssets) * 100).toFixed(1) + '%' : '--'}
@@ -512,7 +512,7 @@ function App() {
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                     <span style={s.tag(CATEGORY_META[a.category]?.color || '#94a3b8')}>{CATEGORY_META[a.category]?.label}</span>
                     <span style={{ fontSize: 11, color: '#334155' }}>數量 {fmtNum(a.qty, a.qty < 1 ? 6 : 2)}</span>
-                    <span style={{ fontSize: 11, color: '#475569' }}>單價 {fmtNum(a.unitPrice, a.unitPrice < 100 ? 2 : 0)}</span>
+                    <span style={{ fontSize: 11, color: '#475569' }}>單價 {fmtNum(a.unitPrice, 2)}</span>
                   </div>
                   <div style={{ display: 'flex', gap: 6 }}>
                     <button onClick={() => setEditAsset(a)} style={{ ...s.btn(false), padding: '4px 12px', fontSize: 12 }}>編輯</button>
@@ -540,7 +540,7 @@ function App() {
                       <td style={{ padding: '10px 14px', color: '#64748b' }}>{a.name}</td>
                       <td style={{ padding: '10px 14px' }}><span style={s.tag(CATEGORY_META[a.category]?.color || '#94a3b8')}>{CATEGORY_META[a.category]?.label}</span></td>
                       <td style={{ padding: '10px 14px', textAlign: 'right', color: '#94a3b8' }}>{fmtNum(a.qty, a.qty < 1 ? 8 : 2)}</td>
-                      <td style={{ padding: '10px 14px', textAlign: 'right', color: '#94a3b8' }}>{fmtNum(a.unitPrice, a.unitPrice < 100 ? 2 : 0)}</td>
+                      <td style={{ padding: '10px 14px', textAlign: 'right', color: '#94a3b8' }}>{fmtNum(a.unitPrice, 2)}</td>
                       <td style={{ padding: '10px 14px', textAlign: 'right', color: '#cbd5e1' }}>{fmtTWD(a.valueTWD)}</td>
                       <td style={{ padding: '10px 14px', textAlign: 'right' }}>
                         <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
@@ -639,11 +639,10 @@ function App() {
               </div>
 
               {/* 數值 */}
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)', gap: 10, marginBottom: 18 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2,1fr)', gap: 10, marginBottom: 18 }}>
                 {[
                   { label: '00631L 市值', value: fmtTWD(tw631Val), color: '#60a5fa' },
                   { label: '現金備用',    value: fmtTWD(cashVal),  color: '#94a3b8' },
-                  { label: '台股總額',    value: fmtTWD(twTotal),  color: '#cbd5e1' },
                 ].map((c, i) => (
                   <div key={i} style={{ background: '#060a0f', borderRadius: 10, padding: '12px 16px', display: isMobile ? 'flex' : 'block', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div style={{ fontSize: 11, color: '#475569', marginBottom: isMobile ? 0 : 4 }}>{c.label}</div>
