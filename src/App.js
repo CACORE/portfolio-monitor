@@ -245,6 +245,12 @@ function App() {
 
   React.useEffect(() => { refresh(); }, []);
 
+  // 每 30 秒自動刷新價格
+  React.useEffect(() => {
+    const id = setInterval(refresh, 30 * 1000);
+    return () => clearInterval(id);
+  }, [refresh]);
+
   // 計算資產市值（台幣）
   const enriched = assets.map(a => {
     const unitPrice = prices[a.symbol] ?? (a.currency === 'USD' ? usdRate : 1);
