@@ -84,12 +84,12 @@ async function fetchAllPrices(assets, usdRate) {
     } catch {}
   }
 
-  // 台股：Yahoo Finance 透過 allorigins CORS proxy 中轉（靜態頁無法直接跨域）
+  // 台股：Yahoo Finance 透過 corsproxy.io 代理（不 redirect，真正伺服器端轉發）
   const twseAssets = assets.filter(a => a.priceSource === 'twse');
   for (const a of twseAssets) {
     try {
       const yfUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${a.symbol}.TW?interval=1d&range=1d`;
-      const r = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(yfUrl)}`)
+      const r = await fetch(`https://corsproxy.io/?${encodeURIComponent(yfUrl)}`)
         .then(res => res.json()).catch(() => null);
       const price = r?.chart?.result?.[0]?.meta?.regularMarketPrice;
       if (price) prices[a.symbol] = price;
