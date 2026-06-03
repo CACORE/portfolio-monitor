@@ -49,6 +49,30 @@ function saveLS(key, val) {
   try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
 }
 
+// ===== GitHub 同步 =====
+const GH_OWNER = 'CACORE';
+const GH_REPO  = 'portfolio-monitor';
+const GH_FILE  = 'portfolio-data.json';
+
+async function syncToGitHub(token, payload) {
+  const json    = JSON.stringify(payload, null, 2);
+  const content = btoa(unescape(encodeURIComponent(json)));
+  const apiUrl  = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`;
+  let sha;
+  try {
+    const r = await fetch(apiUrl, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json());
+    sha = r.sha;
+  } catch {}
+  const body = { message: 'chore: sync portfolio data', content };
+  if (sha) body.sha = sha;
+  const res = await fetch(apiUrl, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error('sync failed');
+}
+
 // ===== 價格抓取 =====
 async function fetchAllPrices(assets, usdRate) {
   const prices = {};
@@ -221,6 +245,9 @@ function App() {
   const [editAsset, setEditAsset] = React.useState(null);
   const [editLiability, setEditLiability] = React.useState(null);
   const [addMode, setAddMode] = React.useState(null); // 'asset' | 'liability'
+  const [githubToken, setGithubToken] = React.useState(() => loadLS('githubToken', ''));
+  const [syncStatus, setSyncStatus] = React.useState('idle'); // idle|syncing|ok|error
+  const [showSettings, setShowSettings] = React.useState(false);
   const [windowWidth, setWindowWidth] = React.useState(window.innerWidth);
   React.useEffect(() => {
     const onResize = () => setWindowWidth(window.innerWidth);
@@ -232,6 +259,23 @@ function App() {
   React.useEffect(() => { saveLS('assets_v2', assets); }, [assets]);
   React.useEffect(() => { saveLS('liabilities_v2', liabilities); }, [liabilities]);
   React.useEffect(() => { saveLS('usdRate', usdRate); }, [usdRate]);
+  React.useEffect(() => { saveLS('githubToken', githubToken); }, [githubToken]);
+
+  // 資產異動後 2 秒同步到 GitHub repo
+  const syncTimer = React.useRef(null);
+  React.useEffect(() => {
+    if (!githubToken) return;
+    clearTimeout(syncTimer.current);
+    syncTimer.current = setTimeout(async () => {
+      setSyncStatus('syncing');
+      try {
+        await syncToGitHub(githubToken, { assets, liabilities, usdRate, updatedAt: new Date().toISOString() });
+        setSyncStatus('ok');
+      } catch {
+        setSyncStatus('error');
+      }
+    }, 2000);
+  }, [assets, liabilities, usdRate, githubToken]);
 
   const refresh = React.useCallback(async () => {
     setLoading(true);
@@ -353,7 +397,13 @@ function App() {
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: isMobile ? 'space-between' : 'flex-end' }}>
           {loading && <span style={{ fontSize: 11, color: '#3b82f6', animation: 'pulse 1.5s infinite' }}>● 更新中</span>}
+          {githubToken && (
+            <span style={{ fontSize: 11, color: syncStatus === 'ok' ? '#34d399' : syncStatus === 'error' ? '#f87171' : syncStatus === 'syncing' ? '#f59e0b' : '#475569' }}>
+              {syncStatus === 'syncing' ? '↑ 同步中' : syncStatus === 'ok' ? '✓ 已同步' : syncStatus === 'error' ? '✗ 同步失敗' : ''}
+            </span>
+          )}
           <button onClick={refresh} disabled={loading} style={{ ...s.btn(false), color: '#60a5fa', borderColor: '#1e3a5f' }}>↻ 更新</button>
+          <button onClick={() => setShowSettings(true)} style={{ ...s.btn(false), padding: '7px 10px', fontSize: 14 }} title="設定">⚙</button>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{ fontSize: 11, color: '#334155' }}>USD/TWD</span>
             <input type="number" value={usdRate} onChange={e => setUsdRate(+e.target.value)}
@@ -807,6 +857,35 @@ function App() {
             setAddMode(null);
           }}
           onClose={() => setAddMode(null)} />
+      )}
+
+      {/* ===== GitHub 同步設定 Modal ===== */}
+      {showSettings && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 16 }}>
+          <div style={{ background: '#0d1520', border: '1px solid #1e3a5f', borderRadius: 14, width: '100%', maxWidth: 420, padding: 28 }}>
+            <div style={{ fontFamily: 'Syne', fontSize: 18, fontWeight: 700, marginBottom: 8, color: '#f1f5f9' }}>GitHub 同步設定</div>
+            <div style={{ fontSize: 12, color: '#475569', marginBottom: 6, lineHeight: 1.6 }}>
+              在終端機執行 <code style={{ background: '#131f2e', padding: '2px 6px', borderRadius: 4, color: '#93c5fd' }}>gh auth token</code> 取得 Token 後貼入。
+              Token 只存在瀏覽器，不會上傳至 repo。
+            </div>
+            <div style={{ fontSize: 11, color: '#475569', marginBottom: 5, marginTop: 16 }}>Personal Access Token</div>
+            <input
+              type="password"
+              value={githubToken}
+              onChange={e => { setGithubToken(e.target.value); setSyncStatus('idle'); }}
+              placeholder="gho_..."
+              style={{ width: '100%', background: '#131f2e', border: '1px solid #1e3a5f', borderRadius: 8, padding: '9px 12px', color: '#e2e8f0', fontFamily: 'DM Mono', fontSize: 13, outline: 'none', marginBottom: 8 }}
+            />
+            {githubToken && (
+              <div style={{ fontSize: 11, marginBottom: 16, color: syncStatus === 'ok' ? '#34d399' : syncStatus === 'error' ? '#f87171' : '#475569' }}>
+                {syncStatus === 'ok' ? '✓ 同步成功，check.py 將自動讀取最新持倉' : syncStatus === 'error' ? '✗ 同步失敗，請確認 Token 有 Contents:write 權限' : syncStatus === 'syncing' ? '↑ 同步中...' : '待存取後自動同步'}
+              </div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button onClick={() => setShowSettings(false)} style={{ background: '#3b82f6', border: 'none', borderRadius: 8, padding: '8px 20px', color: '#fff', fontFamily: 'DM Mono', fontSize: 12, cursor: 'pointer' }}>完成</button>
+            </div>
+          </div>
+        </div>
       )}
 
       <style>{`
