@@ -84,17 +84,15 @@ async function fetchAllPrices(assets, usdRate) {
     } catch {}
   }
 
-  // TWSE: 台股
+  // Yahoo Finance: 台股（TWSE API 有 CORS 限制，改用 Yahoo）
   const twseAssets = assets.filter(a => a.priceSource === 'twse');
   for (const a of twseAssets) {
     try {
-      const r = await fetch(`https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch=tse_${a.symbol}.tw&json=1&delay=0`)
-        .then(r => r.json()).catch(() => null);
-      if (r?.msgArray?.[0]?.z && r.msgArray[0].z !== '-') {
-        prices[a.symbol] = parseFloat(r.msgArray[0].z);
-      } else if (r?.msgArray?.[0]?.y) {
-        prices[a.symbol] = parseFloat(r.msgArray[0].y);
-      }
+      const r = await fetch(
+        `https://query1.finance.yahoo.com/v8/finance/chart/${a.symbol}.TW?interval=1d&range=1d`
+      ).then(r => r.json()).catch(() => null);
+      const price = r?.chart?.result?.[0]?.meta?.regularMarketPrice;
+      if (price) prices[a.symbol] = price;
     } catch {}
   }
 
