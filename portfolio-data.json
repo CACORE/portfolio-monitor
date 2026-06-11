@@ -39,15 +39,6 @@
       "id": "1781161562254"
     },
     {
-      "id": "usd",
-      "category": "lending",
-      "symbol": "USD",
-      "name": "美元放貸",
-      "qty": 3246.02,
-      "priceSource": "fixed",
-      "currency": "USD"
-    },
-    {
       "symbol": "2327",
       "name": "國巨",
       "category": "tw",
@@ -55,6 +46,15 @@
       "priceSource": "twse",
       "currency": "TWD",
       "id": "1781161620171"
+    },
+    {
+      "id": "usd",
+      "category": "lending",
+      "symbol": "USD",
+      "name": "美元放貸",
+      "qty": 3246.02,
+      "priceSource": "fixed",
+      "currency": "USD"
     },
     {
       "id": "cash",
@@ -90,5 +90,5 @@
     }
   ],
   "usdRate": 32.5,
-  "updatedAt": "2026-06-11T07:09:03.844Z"
+  "updatedAt": "2026-06-11T07:09:06.207Z"
 }
