@@ -76,6 +76,24 @@ async function fetchRemoteData(token) {
   return null;
 }
 
+// ===== 匯率自動抓取 =====
+async function fetchUsdRate() {
+  // 主來源：open.er-api.com（免費、瀏覽器可直連、每日更新）
+  try {
+    const r = await fetch('https://open.er-api.com/v6/latest/USD').then(r => r.json());
+    if (r?.rates?.TWD) return Math.round(r.rates.TWD * 1000) / 1000;
+  } catch {}
+  // 備援：Yahoo Finance TWD=X 走 corsproxy
+  try {
+    const yfUrl = 'https://query1.finance.yahoo.com/v8/finance/chart/TWD=X?interval=1d&range=1d';
+    const r = await fetch(`https://corsproxy.io/?${encodeURIComponent(yfUrl)}`)
+      .then(res => res.json()).catch(() => null);
+    const p = r?.chart?.result?.[0]?.meta?.regularMarketPrice;
+    if (p) return Math.round(p * 1000) / 1000;
+  } catch {}
+  return null;
+}
+
 // ===== 價格抓取 =====
 async function fetchAllPrices(assets, usdRate) {
   const prices = {};
@@ -313,7 +331,13 @@ function App() {
 
   const refresh = React.useCallback(async () => {
     setLoading(true);
-    const p = await fetchAllPrices(assets, usdRate);
+    let rate = usdRate;
+    const live = await fetchUsdRate();
+    if (live) {
+      rate = live;
+      if (live !== usdRate) setUsdRate(live);
+    }
+    const p = await fetchAllPrices(assets, rate);
     setPrices(p);
     setLastUpdated(new Date());
     setLoading(false);
@@ -445,7 +469,7 @@ function App() {
           <button onClick={refresh} disabled={loading} style={{ ...s.btn(false), color: '#60a5fa', borderColor: '#1e3a5f' }}>↻ 更新</button>
           <button onClick={() => setShowSettings(true)} style={{ ...s.btn(false), padding: '7px 10px', fontSize: 14 }} title="設定">⚙</button>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 11, color: '#334155' }}>USD/TWD</span>
+            <span style={{ fontSize: 11, color: '#334155' }} title="每次更新自動抓取，可手動暫改">USD/TWD 自動</span>
             <input type="number" value={usdRate} onChange={e => setUsdRate(+e.target.value)}
               style={{ width: 70, background: '#0d1520', border: '1px solid #1e3a5f', borderRadius: 8, padding: '6px 10px', color: '#93c5fd', fontFamily: 'DM Mono', fontSize: 12, outline: 'none' }} />
           </div>
