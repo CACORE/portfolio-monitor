@@ -28,10 +28,6 @@ def load_portfolio():
         return json.load(f)
 
 
-def get_asset(data, symbol):
-    return next((a for a in data['assets'] if a['symbol'] == symbol), None)
-
-
 def get_price(symbol_tw):
     try:
         r = requests.get(
@@ -75,41 +71,45 @@ def main():
         send_telegram('⚠️ 投資牛馬｜portfolio-data.json 不存在，請先在網頁⚙設定 GitHub Token')
         return
 
-    tw631_asset = get_asset(data, '00631L')
-    cash_asset  = get_asset(data, 'CASH')
+    tw_assets   = [a for a in data['assets'] if a.get('category') == 'tw']
+    cash_assets = [a for a in data['assets'] if a.get('category') == 'cash']
 
-    if not tw631_asset or not cash_asset:
-        send_telegram('⚠️ 投資牛馬｜找不到 00631L 或 CASH 資產，請確認網頁資料')
+    if not tw_assets or not cash_assets:
+        send_telegram('⚠️ 投資牛馬｜找不到台股或現金板塊資產，請確認網頁資料')
         return
 
-    price = get_price('00631L.TW')
-    if price is None:
-        send_telegram('⚠️ 投資牛馬｜00631L 價格抓取失敗，請手動確認')
-        return
+    # 台股板塊全部標的市值加總
+    tw_val = 0.0
+    lines  = []
+    for a in tw_assets:
+        price = get_price(f"{a['symbol']}.TW")
+        if price is None:
+            send_telegram(f"⚠️ 投資牛馬｜{a['symbol']} 價格抓取失敗，請手動確認")
+            return
+        qty     = float(a['qty'])
+        val     = qty * price
+        tw_val += val
+        lines.append(f"{a['symbol']} {qty:g} 股 × {price:.2f} = NT${val:,.0f}")
 
-    tw631_qty = float(tw631_asset['qty'])
-    cash_twd  = float(cash_asset['qty'])
-    usd_rate  = float(data.get('usdRate', 32.5))
-
-    tw631_val = tw631_qty * price
-    cash_val  = cash_twd
-    tw_total  = tw631_val + cash_val
-    ratio     = tw631_val / tw_total
-    diff      = tw_total * 0.5 - tw631_val
-    now_str   = datetime.now().strftime('%Y/%m/%d %H:%M')
+    cash_val = sum(float(a['qty']) for a in cash_assets)
+    tw_total = tw_val + cash_val
+    ratio    = tw_val / tw_total
+    diff     = tw_total * 0.5 - tw_val
+    now_str  = datetime.now().strftime('%Y/%m/%d %H:%M')
+    holdings = '\n'.join(lines)
 
     updated_at = data.get('updatedAt', '未知')[:16].replace('T', ' ')
 
     # 70/30 危險區警示
     if ratio > 0.70 or ratio < 0.30:
-        side   = '00631L 持倉過多' if ratio > 0.70 else '現金比例過高'
-        action = '▼ 建議賣出 00631L' if ratio > 0.70 else '▲ 建議買進 00631L'
+        side   = '台股持倉過多' if ratio > 0.70 else '現金比例過高'
+        action = '▼ 建議賣出台股' if ratio > 0.70 else '▲ 建議買進台股'
         send_telegram(
             f'<b>🚨 投資牛馬｜再平衡警示</b>\n\n'
             f'台股比例：<b>{ratio*100:.1f}% / {(1-ratio)*100:.1f}%</b>\n'
             f'狀態：{side}（70/30 危險區）\n\n'
             f'{action} <b>NT${abs(diff):,.0f}</b>\n\n'
-            f'00631L {tw631_qty:g} 股 × {price:.2f} = NT${tw631_val:,.0f}\n'
+            f'{holdings}\n'
             f'現金：NT${cash_val:,.0f}\n'
             f'持倉更新：{updated_at}　📅 {now_str}'
         )
@@ -122,7 +122,7 @@ def main():
             f'<b>📅 投資牛馬｜Q{q} 季度再平衡提醒</b>\n\n'
             f'今天是本季第一個交易日，記得檢視再平衡！\n\n'
             f'目前比例：<b>{ratio*100:.1f}% / {(1-ratio)*100:.1f}%</b>　{status}\n'
-            f'00631L 市值：NT${tw631_val:,.0f}\n'
+            f'台股市值：NT${tw_val:,.0f}\n'
             f'現金備用：NT${cash_val:,.0f}\n'
             f'持倉更新：{updated_at}　📅 {now_str}'
         )

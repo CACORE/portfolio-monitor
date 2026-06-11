@@ -403,14 +403,12 @@ function App() {
   const isPastThisQ = today >= thisQDate;
   const fmtDate = d => `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
 
-  // 00631L再平衡
-  const tw631 = enriched.find(a => a.symbol === '00631L');
-  const cashAsset = enriched.find(a => a.symbol === 'CASH');
-  const tw631Val = tw631?.valueTWD ?? 0;
-  const cashVal = cashAsset?.valueTWD ?? 0;
-  const twTotal = tw631Val + cashVal;
-  const twRatio = twTotal > 0 ? tw631Val / twTotal : 0;
-  const rebalDiff = twTotal * 0.5 - tw631Val;
+  // 台股/現金再平衡（台股板塊全部標的 vs 現金板塊）
+  const twStockVal = enriched.filter(a => a.category === 'tw').reduce((s, a) => s + a.valueTWD, 0);
+  const cashVal = enriched.filter(a => a.category === 'cash').reduce((s, a) => s + a.valueTWD, 0);
+  const twTotal = twStockVal + cashVal;
+  const twRatio = twTotal > 0 ? twStockVal / twTotal : 0;
+  const rebalDiff = twTotal * 0.5 - twStockVal;
   const isUrgent  = twRatio < 0.30 || twRatio > 0.70;
   const isWarning = !isUrgent && (twRatio < 0.45 || twRatio > 0.55);
 
@@ -733,18 +731,18 @@ function App() {
               </div>
             </div>
 
-            {/* 00631L 50/50 */}
+            {/* 台股/現金 50/50 */}
             <div style={{ ...s.card, padding: 20 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
-                <div style={{ fontFamily: 'Syne', fontSize: 15, fontWeight: 700, color: '#f1f5f9' }}>00631L / 現金</div>
+                <div style={{ fontFamily: 'Syne', fontSize: 15, fontWeight: 700, color: '#f1f5f9' }}>台股 / 現金</div>
                 <span style={{ padding: '3px 10px', borderRadius: 20, background: statusColor + '22', color: statusColor, fontSize: 12 }}>{statusLabel}</span>
               </div>
 
               {/* 數值 */}
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2,1fr)', gap: 10, marginBottom: 18 }}>
                 {[
-                  { label: '00631L 市值', value: fmtTWD(tw631Val), color: '#60a5fa' },
-                  { label: '現金備用',    value: fmtTWD(cashVal),  color: '#94a3b8' },
+                  { label: '台股市值',  value: fmtTWD(twStockVal), color: '#60a5fa' },
+                  { label: '現金備用',  value: fmtTWD(cashVal),    color: '#94a3b8' },
                 ].map((c, i) => (
                   <div key={i} style={{ background: '#060a0f', borderRadius: 10, padding: '12px 16px', display: isMobile ? 'flex' : 'block', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div style={{ fontSize: 11, color: '#475569', marginBottom: isMobile ? 0 : 4 }}>{c.label}</div>
@@ -797,15 +795,15 @@ function App() {
                   <div style={{ color: '#34d399', fontSize: 13 }}>✓ 目前比例平衡，無需操作</div>
                 ) : rebalDiff > 0 ? (
                   <div>
-                    <div style={{ color: '#60a5fa', fontSize: 13, marginBottom: 6 }}>▲ 建議買進 00631L</div>
+                    <div style={{ color: '#60a5fa', fontSize: 13, marginBottom: 6 }}>▲ 建議買進台股</div>
                     <div style={{ color: '#f1f5f9', fontSize: 20, fontWeight: 500 }}>{fmtTWD(rebalDiff)}</div>
-                    <div style={{ color: '#475569', fontSize: 11, marginTop: 4 }}>從現金買入，使標的回到 50%</div>
+                    <div style={{ color: '#475569', fontSize: 11, marginTop: 4 }}>從現金買入，使台股回到 50%</div>
                   </div>
                 ) : (
                   <div>
-                    <div style={{ color: '#f59e0b', fontSize: 13, marginBottom: 6 }}>▼ 建議賣出 00631L</div>
+                    <div style={{ color: '#f59e0b', fontSize: 13, marginBottom: 6 }}>▼ 建議賣出台股</div>
                     <div style={{ color: '#f1f5f9', fontSize: 20, fontWeight: 500 }}>{fmtTWD(Math.abs(rebalDiff))}</div>
-                    <div style={{ color: '#475569', fontSize: 11, marginTop: 4 }}>賣出轉入現金，使標的回到 50%</div>
+                    <div style={{ color: '#475569', fontSize: 11, marginTop: 4 }}>賣出轉入現金，使台股回到 50%</div>
                   </div>
                 )}
               </div>
