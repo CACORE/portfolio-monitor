@@ -55,6 +55,15 @@
       "qty": 300000,
       "priceSource": "fixed",
       "currency": "TWD"
+    },
+    {
+      "symbol": "00685L",
+      "name": "群益台灣加權正2",
+      "category": "tw",
+      "qty": 21,
+      "priceSource": "twse",
+      "currency": "TWD",
+      "id": "1781161562254"
     }
   ],
   "liabilities": [
@@ -88,5 +97,5 @@
     }
   ],
   "usdRate": 32.5,
-  "updatedAt": "2026-06-11T07:02:16.543Z"
+  "updatedAt": "2026-06-11T07:06:04.292Z"
 }
