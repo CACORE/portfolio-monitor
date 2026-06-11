@@ -30,20 +30,20 @@
       "id": "1781161620171"
     },
     {
-      "id": "bnb",
-      "category": "crypto",
-      "symbol": "BNB",
-      "name": "幣安幣",
-      "qty": 3.29943355,
-      "priceSource": "binance",
-      "currency": "USD"
-    },
-    {
       "id": "btc",
       "category": "crypto",
       "symbol": "BTC",
       "name": "比特幣",
       "qty": 0.16217047,
+      "priceSource": "binance",
+      "currency": "USD"
+    },
+    {
+      "id": "bnb",
+      "category": "crypto",
+      "symbol": "BNB",
+      "name": "幣安幣",
+      "qty": 3.29943355,
       "priceSource": "binance",
       "currency": "USD"
     },
@@ -90,5 +90,5 @@
     }
   ],
   "usdRate": 32.5,
-  "updatedAt": "2026-06-11T07:09:21.721Z"
+  "updatedAt": "2026-06-11T07:09:26.155Z"
 }
