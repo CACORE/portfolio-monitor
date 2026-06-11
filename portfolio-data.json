@@ -48,15 +48,6 @@
       "id": "1781161562254"
     },
     {
-      "id": "cash",
-      "category": "cash",
-      "symbol": "CASH",
-      "name": "台股備用現金",
-      "qty": 300000,
-      "priceSource": "fixed",
-      "currency": "TWD"
-    },
-    {
       "symbol": "2327",
       "name": "國巨",
       "category": "tw",
@@ -64,6 +55,15 @@
       "priceSource": "twse",
       "currency": "TWD",
       "id": "1781161620171"
+    },
+    {
+      "id": "cash",
+      "category": "cash",
+      "symbol": "CASH",
+      "name": "台股備用現金",
+      "qty": 300000,
+      "priceSource": "fixed",
+      "currency": "TWD"
     }
   ],
   "liabilities": [
@@ -90,5 +90,5 @@
     }
   ],
   "usdRate": 32.5,
-  "updatedAt": "2026-06-11T07:08:54.756Z"
+  "updatedAt": "2026-06-11T07:08:56.775Z"
 }
