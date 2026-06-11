@@ -90,7 +90,7 @@
     {
       "id": "usdt2",
       "symbol": "USDT",
-      "name": "USDT借貸 2",
+      "name": "幣安借貸",
       "qty": 605.3888,
       "currency": "USD"
     },
@@ -103,5 +103,5 @@
     }
   ],
   "usdRate": 32.5,
-  "updatedAt": "2026-06-11T07:34:45.974Z"
+  "updatedAt": "2026-06-11T07:37:36.021Z"
 }
