@@ -181,7 +181,7 @@ function DonutChart({ segments, total }) {
       })}
       {/* 中心圓蓋成甜甜圈 */}
       <circle cx={cx} cy={cy} r={holeR} fill="#060a0f" />
-      <text x={cx} y={cy - 8} textAnchor="middle" fill="#64748b" fontSize="10" fontFamily="DM Mono">淨資產</text>
+      <text x={cx} y={cy - 8} textAnchor="middle" fill="#64748b" fontSize="10" fontFamily="DM Mono">總資產</text>
       <text x={cx} y={cy + 10} textAnchor="middle" fill="#f1f5f9" fontSize="11" fontWeight="500" fontFamily="DM Mono">
         {total > 0 ? (total / 10000).toFixed(0) + '萬' : '--'}
       </text>
@@ -483,7 +483,7 @@ function App() {
             {/* 圓餅圖卡片 */}
             <div style={{ ...s.card, padding: '20px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
               <div style={{ width: '100%', maxWidth: 160, marginBottom: 20 }}>
-                <DonutChart segments={byCat.map(b => ({ color: b.color, value: b.value, pct: b.pct }))} total={netWorth > 0 ? netWorth : totalAssets} />
+                <DonutChart segments={byCat.map(b => ({ color: b.color, value: b.value, pct: b.pct }))} total={totalAssets} />
               </div>
               <div style={{ width: '100%', display: 'flex', flexDirection: 'column' }}>
                 {byCat.map((b, i) => (
@@ -524,7 +524,7 @@ function App() {
           <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: 16 }}>
             <div style={{ ...s.card, padding: 20, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
               <div style={{ width: '100%', maxWidth: 160, marginBottom: 20 }}>
-                <DonutChart segments={byCat.map(b => ({ color: b.color, value: b.value, pct: b.pct }))} total={netWorth > 0 ? netWorth : totalAssets} />
+                <DonutChart segments={byCat.map(b => ({ color: b.color, value: b.value, pct: b.pct }))} total={totalAssets} />
               </div>
               <div style={{ width: '100%', display: 'flex', flexDirection: 'column' }}>
                 {byCat.map((b, i) => (
