@@ -55,6 +55,15 @@
       "priceSource": "twse",
       "currency": "TWD",
       "id": "1781161562254"
+    },
+    {
+      "symbol": "2327",
+      "name": "國巨",
+      "category": "tw",
+      "qty": 1,
+      "priceSource": "twse",
+      "currency": "TWD",
+      "id": "1781161620171"
     }
   ],
   "liabilities": [
@@ -88,5 +97,5 @@
     }
   ],
   "usdRate": 32.5,
-  "updatedAt": "2026-06-11T07:06:38.510Z"
+  "updatedAt": "2026-06-11T07:07:02.184Z"
 }
