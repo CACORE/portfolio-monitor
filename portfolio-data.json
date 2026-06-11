@@ -61,9 +61,11 @@
       "category": "cash",
       "symbol": "CASH",
       "name": "台股備用現金",
-      "qty": 300000,
+      "qty": 301259,
       "priceSource": "fixed",
-      "currency": "TWD"
+      "currency": "TWD",
+      "unitPrice": 1,
+      "valueTWD": 300000
     }
   ],
   "liabilities": [
@@ -90,5 +92,5 @@
     }
   ],
   "usdRate": 32.5,
-  "updatedAt": "2026-06-11T07:09:26.155Z"
+  "updatedAt": "2026-06-11T07:10:26.113Z"
 }
