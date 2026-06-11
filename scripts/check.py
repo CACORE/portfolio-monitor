@@ -4,14 +4,19 @@
 """
 
 import json
+import os
+import sys
 import requests
 from datetime import date, timedelta, datetime
 from pathlib import Path
 
 
-# ===== Telegram =====
-TG_TOKEN   = '8209054446:AAF3MXVYTjS7aviPBVQaxruKo93rVOSeD6c'
-TG_CHAT_ID = '7341232461'
+# ===== Telegram（從 GitHub Actions Secrets 注入，不寫死在程式碼）=====
+TG_TOKEN   = os.environ.get('TG_TOKEN', '')
+TG_CHAT_ID = os.environ.get('TG_CHAT_ID', '')
+
+if not TG_TOKEN or not TG_CHAT_ID:
+    sys.exit('缺少 TG_TOKEN / TG_CHAT_ID 環境變數，請在 repo Settings → Secrets 設定')
 
 
 def load_portfolio():

@@ -1,17 +1,4 @@
-// ===== Telegram 推播 =====
-const TG_TOKEN   = '8209054446:AAF3MXVYTjS7aviPBVQaxruKo93rVOSeD6c';
-const TG_CHAT_ID = '7341232461';
-const ALERT_THROTTLE_MS = 4 * 60 * 60 * 1000; // 4 小時不重複
-
-async function sendTelegramAlert(text) {
-  try {
-    await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: TG_CHAT_ID, text, parse_mode: 'HTML' }),
-    });
-  } catch {}
-}
+// Telegram 警示由 GitHub Actions 的 check.py 負責（token 放 repo Secrets，不放前端）
 
 // ===== 預設資料 =====
 const DEFAULT_ASSETS = [
@@ -34,6 +21,7 @@ const CATEGORY_META = {
   crypto:  { label: '加密貨幣', color: '#f59e0b' },
   lending: { label: '美元放貸', color: '#34d399' },
   tw:      { label: '台股',     color: '#60a5fa' },
+  us:      { label: '美股',     color: '#a78bfa' },
   cash:    { label: '現金',     color: '#94a3b8' },
 };
 
@@ -71,6 +59,21 @@ async function syncToGitHub(token, payload) {
     body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error('sync failed');
+}
+
+async function fetchRemoteData(token) {
+  // 先走 GitHub API（即時），失敗再退回同網域檔案（Pages 部署約延遲 1 分鐘）
+  try {
+    const headers = { Accept: 'application/vnd.github.raw+json' };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const r = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`, { headers });
+    if (r.ok) return await r.json();
+  } catch {}
+  try {
+    const r = await fetch(`./${GH_FILE}?t=${Date.now()}`);
+    if (r.ok) return await r.json();
+  } catch {}
+  return null;
 }
 
 // ===== 價格抓取 =====
@@ -117,6 +120,18 @@ async function fetchAllPrices(assets, usdRate) {
         .then(res => res.json()).catch(() => null);
       const price = r?.chart?.result?.[0]?.meta?.regularMarketPrice;
       if (price) prices[a.symbol] = price;
+    } catch {}
+  }
+
+  // 美股：Yahoo Finance 同樣走 corsproxy，代號不加 .TW，報價為 USD 需乘匯率
+  const usAssets = assets.filter(a => a.priceSource === 'us');
+  for (const a of usAssets) {
+    try {
+      const yfUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${a.symbol}?interval=1d&range=1d`;
+      const r = await fetch(`https://corsproxy.io/?${encodeURIComponent(yfUrl)}`)
+        .then(res => res.json()).catch(() => null);
+      const price = r?.chart?.result?.[0]?.meta?.regularMarketPrice;
+      if (price) prices[a.symbol] = price * usdRate;
     } catch {}
   }
 
@@ -261,15 +276,34 @@ function App() {
   React.useEffect(() => { saveLS('usdRate', usdRate); }, [usdRate]);
   React.useEffect(() => { saveLS('githubToken', githubToken); }, [githubToken]);
 
+  // 開啟時先拉 GitHub 上的資料，比本機新就採用（跨裝置同步）
+  const skipNextSyncRef = React.useRef(true); // 首次 render 與採用遠端資料時不回推
+  React.useEffect(() => {
+    (async () => {
+      const remote = await fetchRemoteData(githubToken);
+      const localTime = loadLS('dataUpdatedAt', '');
+      if (remote?.assets && remote.updatedAt && remote.updatedAt > localTime) {
+        skipNextSyncRef.current = true;
+        setAssets(remote.assets);
+        setLiabilities(remote.liabilities || []);
+        if (remote.usdRate) setUsdRate(remote.usdRate);
+        saveLS('dataUpdatedAt', remote.updatedAt);
+      }
+    })();
+  }, []);
+
   // 資產異動後 2 秒同步到 GitHub repo
   const syncTimer = React.useRef(null);
   React.useEffect(() => {
+    if (skipNextSyncRef.current) { skipNextSyncRef.current = false; return; }
     if (!githubToken) return;
     clearTimeout(syncTimer.current);
     syncTimer.current = setTimeout(async () => {
       setSyncStatus('syncing');
+      const updatedAt = new Date().toISOString();
       try {
-        await syncToGitHub(githubToken, { assets, liabilities, usdRate, updatedAt: new Date().toISOString() });
+        await syncToGitHub(githubToken, { assets, liabilities, usdRate, updatedAt });
+        saveLS('dataUpdatedAt', updatedAt);
         setSyncStatus('ok');
       } catch {
         setSyncStatus('error');
@@ -285,13 +319,38 @@ function App() {
     setLoading(false);
   }, [assets, usdRate]);
 
-  React.useEffect(() => { refresh(); }, []);
-
-  // 每 30 秒自動刷新價格
+  // 載入與資產異動時立即刷新，之後每 30 秒自動刷新
   React.useEffect(() => {
+    refresh();
     const id = setInterval(refresh, 30 * 1000);
     return () => clearInterval(id);
   }, [refresh]);
+
+  // ===== 資產排序（桌面拖曳 / 手機 ▲▼）=====
+  const [dragId, setDragId] = React.useState(null);
+  const handleDrop = (targetId) => {
+    if (!dragId || dragId === targetId) { setDragId(null); return; }
+    setAssets(as => {
+      const from = as.findIndex(x => x.id === dragId);
+      const to = as.findIndex(x => x.id === targetId);
+      if (from < 0 || to < 0) return as;
+      const next = [...as];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      return next;
+    });
+    setDragId(null);
+  };
+  const moveAsset = (id, dir) => {
+    setAssets(as => {
+      const i = as.findIndex(x => x.id === id);
+      const j = i + dir;
+      if (i < 0 || j < 0 || j >= as.length) return as;
+      const next = [...as];
+      [next[i], next[j]] = [next[j], next[i]];
+      return next;
+    });
+  };
 
   // 計算資產市值（台幣）
   const enriched = assets.map(a => {
@@ -354,23 +413,6 @@ function App() {
   const rebalDiff = twTotal * 0.5 - tw631Val;
   const isUrgent  = twRatio < 0.30 || twRatio > 0.70;
   const isWarning = !isUrgent && (twRatio < 0.45 || twRatio > 0.55);
-
-  // 危險區 → Telegram 推播（4 小時內不重複）
-  React.useEffect(() => {
-    if (!isUrgent || !lastUpdated) return;
-    const lastAlert = parseInt(loadLS('lastRebalAlert', '0'));
-    if (Date.now() - lastAlert < ALERT_THROTTLE_MS) return;
-    const side   = twRatio > 0.7 ? '00631L 持倉過多' : '現金比例過高';
-    const action = twRatio > 0.7 ? '▼ 建議賣出 00631L' : '▲ 建議買進 00631L';
-    const msg =
-      `<b>🚨 投資牛馬｜再平衡警示</b>\n\n` +
-      `台股比例：<b>${(twRatio*100).toFixed(1)}% / ${(100-twRatio*100).toFixed(1)}%</b>\n` +
-      `狀態：${side}（已觸發 70/30 危險區）\n\n` +
-      `${action} <b>${fmtTWD(Math.abs(rebalDiff))}</b>\n\n` +
-      `📅 ${lastUpdated.toLocaleString('zh-TW')}`;
-    sendTelegramAlert(msg);
-    saveLS('lastRebalAlert', Date.now().toString());
-  }, [isUrgent, lastUpdated]);
 
   // ===== UI =====
   const s = {
@@ -565,6 +607,10 @@ function App() {
                     <span style={{ fontSize: 11, color: '#475569' }}>單價 {fmtNum(a.unitPrice, 2)}</span>
                   </div>
                   <div style={{ display: 'flex', gap: 6 }}>
+                    <button onClick={() => moveAsset(a.id, -1)} disabled={i === 0}
+                      style={{ ...s.btn(false), padding: '4px 10px', fontSize: 12, opacity: i === 0 ? 0.3 : 1 }}>▲</button>
+                    <button onClick={() => moveAsset(a.id, 1)} disabled={i === enriched.length - 1}
+                      style={{ ...s.btn(false), padding: '4px 10px', fontSize: 12, opacity: i === enriched.length - 1 ? 0.3 : 1 }}>▼</button>
                     <button onClick={() => setEditAsset(a)} style={{ ...s.btn(false), padding: '4px 12px', fontSize: 12 }}>編輯</button>
                     <button onClick={() => setAssets(as => as.filter(x => x.id !== a.id))}
                       style={{ ...s.btn(false), padding: '4px 12px', fontSize: 12, color: '#f87171', borderColor: '#3f1010' }}>刪除</button>
@@ -578,14 +624,20 @@ function App() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid #131f2e' }}>
-                    {['代號', '名稱', '板塊', '數量', '單價(TWD)', '市值', ''].map((h, i) => (
-                      <th key={i} style={{ padding: '11px 14px', textAlign: i >= 3 ? 'right' : 'left', color: '#334155', fontWeight: 400 }}>{h}</th>
+                    {['', '代號', '名稱', '板塊', '數量', '單價(TWD)', '市值', ''].map((h, i) => (
+                      <th key={i} style={{ padding: '11px 14px', textAlign: i >= 4 ? 'right' : 'left', color: '#334155', fontWeight: 400 }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {enriched.map(a => (
-                    <tr key={a.id} style={{ borderBottom: '1px solid #0d1520' }}>
+                    <tr key={a.id} draggable
+                      onDragStart={() => setDragId(a.id)}
+                      onDragOver={e => e.preventDefault()}
+                      onDrop={() => handleDrop(a.id)}
+                      onDragEnd={() => setDragId(null)}
+                      style={{ borderBottom: '1px solid #0d1520', opacity: dragId === a.id ? 0.4 : 1 }}>
+                      <td style={{ padding: '10px 0 10px 14px', color: '#334155', cursor: 'grab', width: 18, fontSize: 14 }} title="拖曳排序">⠿</td>
                       <td style={{ padding: '10px 14px', color: '#f1f5f9', fontWeight: 500 }}>{a.symbol}</td>
                       <td style={{ padding: '10px 14px', color: '#64748b' }}>{a.name}</td>
                       <td style={{ padding: '10px 14px' }}><span style={s.tag(CATEGORY_META[a.category]?.color || '#94a3b8')}>{CATEGORY_META[a.category]?.label}</span></td>
@@ -792,6 +844,7 @@ function App() {
               { value: 'binance', label: 'Binance API (BTC/BNB等)' },
               { value: 'bitget', label: 'Bitget API (BGB等)' },
               { value: 'twse', label: '台灣證交所 (台股)' },
+              { value: 'us', label: '美股 (Yahoo Finance)' },
               { value: 'fixed', label: '固定（依幣別換算）' },
             ]},
             { key: 'currency', label: '計價幣別', type: 'select', options: [{ value: 'USD', label: 'USD' }, { value: 'TWD', label: 'TWD' }] },
@@ -799,7 +852,6 @@ function App() {
           onSave={form => {
             setAssets(as => as.map(a => a.id === editAsset.id ? { ...a, ...form, qty: parseFloat(form.qty) } : a));
             setEditAsset(null);
-            setTimeout(refresh, 100);
           }}
           onClose={() => setEditAsset(null)} />
       )}
@@ -816,6 +868,7 @@ function App() {
               { value: 'binance', label: 'Binance API (BTC/BNB等)' },
               { value: 'bitget', label: 'Bitget API (BGB等)' },
               { value: 'twse', label: '台灣證交所 (台股)' },
+              { value: 'us', label: '美股 (Yahoo Finance)' },
               { value: 'fixed', label: '固定（依幣別換算）' },
             ]},
             { key: 'currency', label: '計價幣別', type: 'select', options: [{ value: 'USD', label: 'USD' }, { value: 'TWD', label: 'TWD' }] },
@@ -824,7 +877,6 @@ function App() {
             const newAsset = { ...form, id: Date.now().toString(), qty: parseFloat(form.qty) };
             setAssets(as => [...as, newAsset]);
             setAddMode(null);
-            setTimeout(refresh, 100);
           }}
           onClose={() => setAddMode(null)} />
       )}
