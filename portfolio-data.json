@@ -1,15 +1,6 @@
 {
   "assets": [
     {
-      "id": "bnb",
-      "category": "crypto",
-      "symbol": "BNB",
-      "name": "幣安幣",
-      "qty": 3.29943355,
-      "priceSource": "binance",
-      "currency": "USD"
-    },
-    {
       "id": "tw1",
       "category": "tw",
       "symbol": "00631L",
@@ -19,15 +10,6 @@
       "currency": "TWD",
       "unitPrice": 1,
       "valueTWD": 0
-    },
-    {
-      "id": "btc",
-      "category": "crypto",
-      "symbol": "BTC",
-      "name": "比特幣",
-      "qty": 0.16217047,
-      "priceSource": "binance",
-      "currency": "USD"
     },
     {
       "symbol": "00685L",
@@ -46,6 +28,24 @@
       "priceSource": "twse",
       "currency": "TWD",
       "id": "1781161620171"
+    },
+    {
+      "id": "bnb",
+      "category": "crypto",
+      "symbol": "BNB",
+      "name": "幣安幣",
+      "qty": 3.29943355,
+      "priceSource": "binance",
+      "currency": "USD"
+    },
+    {
+      "id": "btc",
+      "category": "crypto",
+      "symbol": "BTC",
+      "name": "比特幣",
+      "qty": 0.16217047,
+      "priceSource": "binance",
+      "currency": "USD"
     },
     {
       "id": "usd",
@@ -90,5 +90,5 @@
     }
   ],
   "usdRate": 32.5,
-  "updatedAt": "2026-06-11T07:09:10.518Z"
+  "updatedAt": "2026-06-11T07:09:21.721Z"
 }
