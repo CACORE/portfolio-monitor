@@ -30,6 +30,17 @@
       "id": "1781161620171"
     },
     {
+      "symbol": "NOK",
+      "name": "NOK",
+      "category": "us",
+      "qty": 34.3776,
+      "priceSource": "us",
+      "currency": "USD",
+      "id": "1781163088207",
+      "unitPrice": 435.5,
+      "valueTWD": 14971.444800000001
+    },
+    {
       "id": "btc",
       "category": "crypto",
       "symbol": "BTC",
@@ -46,17 +57,6 @@
       "qty": 3.29943355,
       "priceSource": "binance",
       "currency": "USD"
-    },
-    {
-      "symbol": "NOK",
-      "name": "NOK",
-      "category": "us",
-      "qty": 34.3776,
-      "priceSource": "us",
-      "currency": "USD",
-      "id": "1781163088207",
-      "unitPrice": 435.5,
-      "valueTWD": 14971.444800000001
     },
     {
       "id": "usd",
@@ -103,5 +103,5 @@
     }
   ],
   "usdRate": 32.5,
-  "updatedAt": "2026-06-11T07:32:02.888Z"
+  "updatedAt": "2026-06-11T07:32:06.604Z"
 }
