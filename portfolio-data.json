@@ -61,6 +61,15 @@
       "valueTWD": 103409.38041
     },
     {
+      "symbol": "MU",
+      "name": "美光",
+      "category": "us",
+      "qty": 0.10189,
+      "priceSource": "us",
+      "currency": "USD",
+      "id": "1781276698989"
+    },
+    {
       "id": "cash",
       "category": "cash",
       "symbol": "CASH",
@@ -70,15 +79,6 @@
       "currency": "TWD",
       "unitPrice": 1,
       "valueTWD": 300000
-    },
-    {
-      "symbol": "MU",
-      "name": "美光",
-      "category": "us",
-      "qty": 0.10189,
-      "priceSource": "us",
-      "currency": "USD",
-      "id": "1781276698989"
     }
   ],
   "liabilities": [
@@ -98,5 +98,5 @@
     }
   ],
   "usdRate": 31.611,
-  "updatedAt": "2026-06-12T15:05:01.000Z"
+  "updatedAt": "2026-06-12T15:05:06.096Z"
 }
