@@ -50,15 +50,6 @@
       "currency": "USD"
     },
     {
-      "id": "bnb",
-      "category": "crypto",
-      "symbol": "BNB",
-      "name": "幣安幣",
-      "qty": 3.29943355,
-      "priceSource": "binance",
-      "currency": "USD"
-    },
-    {
       "id": "usd",
       "category": "lending",
       "symbol": "USD",
@@ -105,5 +96,5 @@
     }
   ],
   "usdRate": 31.611,
-  "updatedAt": "2026-06-12T15:03:17.101Z"
+  "updatedAt": "2026-06-12T15:03:36.403Z"
 }
