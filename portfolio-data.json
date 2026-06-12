@@ -44,10 +44,12 @@
       "symbol": "MU",
       "name": "美光",
       "category": "us",
-      "qty": 0.10189,
+      "qty": 0.1577,
       "priceSource": "us",
       "currency": "USD",
-      "id": "1781276698989"
+      "id": "1781276698989",
+      "unitPrice": 31367.27919,
+      "valueTWD": 3196.0120766690998
     },
     {
       "id": "btc",
@@ -98,5 +100,5 @@
     }
   ],
   "usdRate": 31.611,
-  "updatedAt": "2026-06-12T15:05:09.933Z"
+  "updatedAt": "2026-06-12T15:12:18.385Z"
 }
