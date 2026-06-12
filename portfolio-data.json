@@ -41,6 +41,15 @@
       "valueTWD": 14971.444800000001
     },
     {
+      "symbol": "MU",
+      "name": "美光",
+      "category": "us",
+      "qty": 0.10189,
+      "priceSource": "us",
+      "currency": "USD",
+      "id": "1781276698989"
+    },
+    {
       "id": "btc",
       "category": "crypto",
       "symbol": "BTC",
@@ -59,15 +68,6 @@
       "currency": "USD",
       "unitPrice": 31.611,
       "valueTWD": 103409.38041
-    },
-    {
-      "symbol": "MU",
-      "name": "美光",
-      "category": "us",
-      "qty": 0.10189,
-      "priceSource": "us",
-      "currency": "USD",
-      "id": "1781276698989"
     },
     {
       "id": "cash",
@@ -98,5 +98,5 @@
     }
   ],
   "usdRate": 31.611,
-  "updatedAt": "2026-06-12T15:05:06.096Z"
+  "updatedAt": "2026-06-12T15:05:09.933Z"
 }
