@@ -620,33 +620,42 @@ function App() {
           {isMobile ? (
             /* 手機版：card list */
             enriched.map((a, i) => (
-              <div key={a.id} style={{ padding: '14px 16px', borderBottom: i < enriched.length - 1 ? '1px solid #0d1520' : 'none' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
-                  <div>
-                    <div style={{ color: '#f3f7fc', fontWeight: 500, fontSize: 14 }}>{a.symbol}</div>
-                    <div style={{ fontSize: 11, color: '#54677e', marginTop: 2 }}>{a.name}</div>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ color: '#cfdbea', fontSize: 14 }}>{fmtTWD(a.valueTWD)}</div>
-                    <div style={{ fontSize: 11, color: '#54677e', marginTop: 2 }}>
-                      {totalAssets > 0 ? ((a.valueTWD / totalAssets) * 100).toFixed(1) + '%' : '--'}
-                    </div>
+              <div key={a.id} style={{ padding: '12px 16px', borderBottom: i < enriched.length - 1 ? '1px solid #0d1520' : 'none' }}>
+                {/* 第一行：symbol + 市值 */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 2 }}>
+                  <div style={{ color: '#f3f7fc', fontWeight: 600, fontSize: 15 }}>{a.symbol}</div>
+                  <div style={{ color: '#cfdbea', fontSize: 14, fontWeight: 500 }}>{fmtTWD(a.valueTWD)}</div>
+                </div>
+                {/* 第二行：名稱 + 佔比 */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 9 }}>
+                  <div style={{ fontSize: 11, color: '#54677e' }}>{a.name}</div>
+                  <div style={{ fontSize: 11, color: '#54677e' }}>
+                    {totalAssets > 0 ? ((a.valueTWD / totalAssets) * 100).toFixed(1) + '%' : '--'}
                   </div>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <span style={s.tag(CATEGORY_META[a.category]?.color || '#9dadc2')}>{CATEGORY_META[a.category]?.label}</span>
-                    <span style={{ fontSize: 11, color: '#3a4b60' }}>數量 {fmtNum(a.qty, a.qty < 1 ? 6 : 2)}</span>
-                    <span style={{ fontSize: 11, color: '#54677e' }}>單價 {fmtNum(a.unitPrice, 2)}</span>
+                {/* 第三行：tag + 數量/單價（flex 1）+ 按鈕（固定） */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                  <span style={{ ...s.tag(CATEGORY_META[a.category]?.color || '#9dadc2'), whiteSpace: 'nowrap', flexShrink: 0 }}>
+                    {CATEGORY_META[a.category]?.label}
+                  </span>
+                  <div style={{ flex: 1, minWidth: 0, display: 'flex', gap: 5, fontSize: 11, color: '#54677e', overflow: 'hidden' }}>
+                    <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#9dadc2' }}>
+                      {fmtNum(a.qty, a.qty < 1 ? 6 : 2)}
+                    </span>
+                    <span style={{ flexShrink: 0, color: '#3a4b60' }}>·</span>
+                    <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {fmtNum(a.unitPrice, 2)}
+                    </span>
                   </div>
-                  <div style={{ display: 'flex', gap: 6 }}>
+                  <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
                     <button onClick={() => moveAsset(a.id, -1)} disabled={i === 0}
-                      style={{ ...s.btn(false), padding: '4px 10px', fontSize: 12, opacity: i === 0 ? 0.3 : 1 }}>▲</button>
+                      style={{ ...s.btn(false), width: 28, height: 28, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, opacity: i === 0 ? 0.22 : 1 }}>▲</button>
                     <button onClick={() => moveAsset(a.id, 1)} disabled={i === enriched.length - 1}
-                      style={{ ...s.btn(false), padding: '4px 10px', fontSize: 12, opacity: i === enriched.length - 1 ? 0.3 : 1 }}>▼</button>
-                    <button onClick={() => setEditAsset(a)} style={{ ...s.btn(false), padding: '4px 12px', fontSize: 12 }}>編輯</button>
+                      style={{ ...s.btn(false), width: 28, height: 28, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, opacity: i === enriched.length - 1 ? 0.22 : 1 }}>▼</button>
+                    <button onClick={() => setEditAsset(a)}
+                      style={{ ...s.btn(false), height: 28, padding: '0 10px', fontSize: 11 }}>編輯</button>
                     <button onClick={() => setAssets(as => as.filter(x => x.id !== a.id))}
-                      style={{ ...s.btn(false), padding: '4px 12px', fontSize: 12, color: '#f87171', borderColor: '#3f1010' }}>刪除</button>
+                      style={{ ...s.btn(false), height: 28, padding: '0 10px', fontSize: 11, color: '#f87171', borderColor: '#3f1010' }}>刪</button>
                   </div>
                 </div>
               </div>
