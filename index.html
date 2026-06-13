@@ -53,6 +53,9 @@
     ::-webkit-scrollbar-thumb { background: #1c2f4a; border-radius: 3px; }
     ::-webkit-scrollbar-thumb:hover { background: #2a4368; }
 
+    /* iOS Safari：input font-size < 16px 會觸發自動 zoom，強制 16px 防止 */
+    input, select { font-size: 16px !important; }
+
     button { transition: filter .15s, transform .1s, box-shadow .2s, border-color .2s, background .2s, color .2s; }
     button:hover:not(:disabled) { filter: brightness(1.32); }
     button:active:not(:disabled) { transform: translateY(1px); }
@@ -76,6 +79,6 @@
 </head>
 <body>
   <div id="root"></div>
-  <script type="text/babel" src="src/App.js?v=25"></script>
+  <script type="text/babel" src="src/App.js?v=26"></script>
 </body>
 </html>
