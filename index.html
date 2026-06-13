@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>資產監控</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@300;400;500&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -13,20 +14,68 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html { font-size: 14px; }
     body {
-      background: #060a0f;
-      color: #e2e8f0;
-      font-family: 'DM Mono', monospace;
+      background:
+        radial-gradient(1100px 540px at 72% -12%, rgba(56, 116, 255, .11), transparent 62%),
+        radial-gradient(900px 620px at -8% 108%, rgba(45, 212, 167, .055), transparent 60%),
+        #05080d;
+      background-attachment: fixed;
+      color: #dce6f2;
+      font-family: 'DM Mono', 'Noto Sans TC', monospace;
       min-height: 100vh;
       overflow-x: hidden;
+      font-feature-settings: 'tnum';
     }
-    #root { min-height: 100vh; }
-    ::-webkit-scrollbar { width: 4px; }
-    ::-webkit-scrollbar-track { background: #0d1520; }
-    ::-webkit-scrollbar-thumb { background: #1e3a5f; border-radius: 2px; }
+    /* 藍圖網格，往下淡出 */
+    body::after {
+      content: '';
+      position: fixed; inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(99, 141, 255, .05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(99, 141, 255, .05) 1px, transparent 1px);
+      background-size: 56px 56px;
+      -webkit-mask-image: radial-gradient(1000px 640px at 60% -5%, #000 0%, transparent 78%);
+      mask-image: radial-gradient(1000px 640px at 60% -5%, #000 0%, transparent 78%);
+    }
+    /* 膠片噪點 */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      z-index: 99;
+      pointer-events: none;
+      opacity: .05;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+    }
+    #root { min-height: 100vh; position: relative; }
+    ::selection { background: rgba(77, 159, 255, .32); }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: #080d14; }
+    ::-webkit-scrollbar-thumb { background: #1c2f4a; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #2a4368; }
+
+    button { transition: filter .15s, transform .1s, box-shadow .2s, border-color .2s, background .2s, color .2s; }
+    button:hover:not(:disabled) { filter: brightness(1.32); }
+    button:active:not(:disabled) { transform: translateY(1px); }
+    input, select { transition: border-color .18s, box-shadow .18s; }
+    input:focus, select:focus { border-color: #3d77c2 !important; box-shadow: 0 0 0 3px rgba(77, 159, 255, .13); }
+    input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
+    select option { background: #0c141f; }
+    table tbody tr { transition: background .15s; }
+
+    /* 進場動畫 */
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+    .rv { animation: fadeUp .55s cubic-bezier(.22, .9, .3, 1) both; }
+    @keyframes donutIn { from { opacity: 0; transform: scale(.85) rotate(-12deg); } to { opacity: 1; transform: none; } }
+    .donut-in { animation: donutIn .8s cubic-bezier(.22, .9, .3, 1) both; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes modalIn { from { opacity: 0; transform: translateY(18px) scale(.97); } to { opacity: 1; transform: none; } }
+    .modal-bg { animation: fadeIn .2s ease both; backdrop-filter: blur(7px); -webkit-backdrop-filter: blur(7px); }
+    .modal-card { animation: modalIn .28s cubic-bezier(.22, .9, .3, 1) both; }
   </style>
 </head>
 <body>
   <div id="root"></div>
-  <script type="text/babel" src="src/App.js?v=22"></script>
+  <script type="text/babel" src="src/App.js?v=24"></script>
 </body>
 </html>
