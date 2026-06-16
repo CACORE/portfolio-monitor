@@ -785,7 +785,7 @@ function App() {
         const statusLabel = isUrgentHigh ? '❗ 曝險過高' : isWarningHigh ? '⚠️ 曝險偏高' : isNormal ? '✓ 接近目標' : isWarningLow ? '▼ 曝險偏低' : '▼ 曝險過低';
         // 進度條刻度：0–180%，目標線 120%
         const BAR_MAX = 180;
-        const barFill = Math.min(exposurePct / (BAR_MAX / 100), 100);
+        const barFill = Math.min((exposurePct * 100) / BAR_MAX * 100, 100);
         return (
           <div className="rv" style={{ display: 'flex', flexDirection: 'column', gap: 16, animationDelay: '360ms' }}>
 
@@ -808,11 +808,11 @@ function App() {
               <div style={{ marginBottom: 10 }}>
                 <div style={{ position: 'relative', background: '#0a1018', border: '1px solid #15243a', borderRadius: 6, height: 12 }}>
                   {/* 色區：< 80% 藍、80–100% 黃、100–140% 綠、140–160% 橙、> 160% 紅 */}
-                  <div style={{ position: 'absolute', left: '0%',              width: '44.4%', height: '100%', background: '#60a5fa0d', borderRadius: '6px 0 0 6px' }} />
-                  <div style={{ position: 'absolute', left: '44.4%',           width: '11.1%', height: '100%', background: '#f59e0b0d' }} />
-                  <div style={{ position: 'absolute', left: '55.5%',           width: '22.2%', height: '100%', background: '#34d3990d' }} />
-                  <div style={{ position: 'absolute', left: '77.7%',           width: '11.1%', height: '100%', background: '#f59e0b0d' }} />
-                  <div style={{ position: 'absolute', left: '88.8%',           width: '11.2%', height: '100%', background: '#f871710d', borderRadius: '0 6px 6px 0' }} />
+                  <div style={{ position: 'absolute', left: '0%',    width: '44.4%', height: '100%', background: '#60a5fa20', borderRadius: '6px 0 0 6px' }} />
+                  <div style={{ position: 'absolute', left: '44.4%', width: '11.1%', height: '100%', background: '#f59e0b28' }} />
+                  <div style={{ position: 'absolute', left: '55.5%', width: '22.2%', height: '100%', background: '#34d39928' }} />
+                  <div style={{ position: 'absolute', left: '77.7%', width: '11.1%', height: '100%', background: '#f59e0b28' }} />
+                  <div style={{ position: 'absolute', left: '88.8%', width: '11.2%', height: '100%', background: '#f8717128', borderRadius: '0 6px 6px 0' }} />
                   {/* 填充 */}
                   <div style={{ position: 'absolute', left: 0, width: barFill + '%', height: '100%', background: `linear-gradient(90deg,${statusColor}88,${statusColor})`, borderRadius: 6, transition: 'width .5s cubic-bezier(.22,.9,.3,1)', boxShadow: `0 0 14px -2px ${statusColor}` }} />
                   {/* 目標線 120% = 66.7% 寬度 */}
