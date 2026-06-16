@@ -19,7 +19,10 @@
       "qty": 21,
       "priceSource": "twse",
       "currency": "TWD",
-      "id": "1781161562254"
+      "id": "1781161562254",
+      "unitPrice": 297.4,
+      "valueTWD": 6245.4,
+      "leverage": 2
     },
     {
       "symbol": "2327",
@@ -101,5 +104,5 @@
     }
   ],
   "usdRate": 31.542,
-  "updatedAt": "2026-06-16T06:53:57.670Z"
+  "updatedAt": "2026-06-16T06:54:01.334Z"
 }
