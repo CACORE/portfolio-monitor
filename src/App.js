@@ -442,10 +442,12 @@ function App() {
   const safeVal = enriched.filter(a => SAFE_CATEGORIES.has(a.category)).reduce((s, a) => s + a.valueTWD, 0);
   const safePct = totalAssets > 0 ? safeVal / totalAssets : 0;
 
-  // 曝險狀態
-  const isUrgent  = exposurePct > 0.70;
-  const isWarning = !isUrgent && exposurePct > 0.55;
-  const isLow     = exposurePct < 0.30;
+  // 曝險狀態（目標 120%）
+  const isUrgentHigh  = exposurePct > 1.60;
+  const isWarningHigh = !isUrgentHigh && exposurePct > 1.40;
+  const isNormal      = exposurePct >= 1.00 && exposurePct <= 1.40;
+  const isWarningLow  = exposurePct >= 0.80 && exposurePct < 1.00;
+  const isUrgentLow   = exposurePct < 0.80;
 
   // 各板塊曝險明細（排除安全板塊）
   const exposureByCat = Object.entries(
@@ -779,8 +781,11 @@ function App() {
 
       {/* ===== 再平衡 ===== */}
       {tab === 'rebalance' && (() => {
-        const statusColor = isUrgent ? '#f87171' : isWarning ? '#f59e0b' : isLow ? '#60a5fa' : '#34d399';
-        const statusLabel = isUrgent ? '❗ 曝險過高' : isWarning ? '⚠️ 曝險偏高' : isLow ? '▼ 曝險偏低' : '✓ 曝險正常';
+        const statusColor = isUrgentHigh ? '#f87171' : isWarningHigh ? '#f59e0b' : isNormal ? '#34d399' : '#60a5fa';
+        const statusLabel = isUrgentHigh ? '❗ 曝險過高' : isWarningHigh ? '⚠️ 曝險偏高' : isNormal ? '✓ 接近目標' : isWarningLow ? '▼ 曝險偏低' : '▼ 曝險過低';
+        // 進度條刻度：0–180%，目標線 120%
+        const BAR_MAX = 180;
+        const barFill = Math.min(exposurePct / (BAR_MAX / 100), 100);
         return (
           <div className="rv" style={{ display: 'flex', flexDirection: 'column', gap: 16, animationDelay: '360ms' }}>
 
@@ -796,21 +801,29 @@ function App() {
                 <div style={{ fontSize: 44, fontWeight: 700, letterSpacing: '-1.5px', color: statusColor, textShadow: `0 0 40px ${statusColor}50` }}>
                   {(exposurePct * 100).toFixed(1)}%
                 </div>
-                <div style={{ fontSize: 11, color: '#54677e', marginTop: 3 }}>等效曝險 / 總資產</div>
+                <div style={{ fontSize: 11, color: '#54677e', marginTop: 3 }}>等效曝險 / 總資產　目標 120%</div>
               </div>
 
-              {/* 曝險進度條 */}
+              {/* 曝險進度條（0–180% 刻度） */}
               <div style={{ marginBottom: 10 }}>
                 <div style={{ position: 'relative', background: '#0a1018', border: '1px solid #15243a', borderRadius: 6, height: 12 }}>
-                  <div style={{ position: 'absolute', left: 0,    width: '30%', height: '100%', background: '#60a5fa0e', borderRadius: '6px 0 0 6px' }} />
-                  <div style={{ position: 'absolute', left: '30%', width: '40%', height: '100%', background: '#34d3990e' }} />
-                  <div style={{ position: 'absolute', left: '70%', width: '30%', height: '100%', background: '#f871710e', borderRadius: '0 6px 6px 0' }} />
-                  <div style={{ position: 'absolute', left: 0, width: Math.min(exposurePct * 100, 100) + '%', height: '100%', background: `linear-gradient(90deg,${statusColor}99,${statusColor})`, borderRadius: 6, transition: 'width .5s cubic-bezier(.22,.9,.3,1)', boxShadow: `0 0 14px -2px ${statusColor}` }} />
+                  {/* 色區：< 80% 藍、80–100% 黃、100–140% 綠、140–160% 橙、> 160% 紅 */}
+                  <div style={{ position: 'absolute', left: '0%',              width: '44.4%', height: '100%', background: '#60a5fa0d', borderRadius: '6px 0 0 6px' }} />
+                  <div style={{ position: 'absolute', left: '44.4%',           width: '11.1%', height: '100%', background: '#f59e0b0d' }} />
+                  <div style={{ position: 'absolute', left: '55.5%',           width: '22.2%', height: '100%', background: '#34d3990d' }} />
+                  <div style={{ position: 'absolute', left: '77.7%',           width: '11.1%', height: '100%', background: '#f59e0b0d' }} />
+                  <div style={{ position: 'absolute', left: '88.8%',           width: '11.2%', height: '100%', background: '#f871710d', borderRadius: '0 6px 6px 0' }} />
+                  {/* 填充 */}
+                  <div style={{ position: 'absolute', left: 0, width: barFill + '%', height: '100%', background: `linear-gradient(90deg,${statusColor}88,${statusColor})`, borderRadius: 6, transition: 'width .5s cubic-bezier(.22,.9,.3,1)', boxShadow: `0 0 14px -2px ${statusColor}` }} />
+                  {/* 目標線 120% = 66.7% 寬度 */}
+                  <div style={{ position: 'absolute', left: '66.7%', top: -3, width: 2, height: 'calc(100% + 6px)', background: '#7fb3ff', borderRadius: 1, boxShadow: '0 0 6px #7fb3ff80' }} />
                 </div>
                 <div style={{ display: 'flex', fontSize: 10, color: '#3a4b60', marginTop: 5, position: 'relative', height: 14 }}>
-                  <span style={{ position: 'absolute', left: '30%', transform: 'translateX(-50%)' }}>30%</span>
-                  <span style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', color: '#54677e' }}>中性</span>
-                  <span style={{ position: 'absolute', left: '70%', transform: 'translateX(-50%)' }}>70%</span>
+                  <span style={{ position: 'absolute', left: '44.4%', transform: 'translateX(-50%)' }}>80%</span>
+                  <span style={{ position: 'absolute', left: '55.5%', transform: 'translateX(-50%)' }}>100%</span>
+                  <span style={{ position: 'absolute', left: '66.7%', transform: 'translateX(-50%)', color: '#7fb3ff' }}>120%</span>
+                  <span style={{ position: 'absolute', left: '77.7%', transform: 'translateX(-50%)' }}>140%</span>
+                  <span style={{ position: 'absolute', left: '88.8%', transform: 'translateX(-50%)' }}>160%</span>
                 </div>
               </div>
 
@@ -830,26 +843,34 @@ function App() {
             </div>
 
             {/* 曝險警示 */}
-            {isUrgent && (
+            {isUrgentHigh && (
               <div style={{ background: '#f871711a', border: '1px solid #f8717140', borderRadius: 12, padding: '14px 16px' }}>
                 <div style={{ color: '#f87171', fontSize: 13, fontWeight: 500, marginBottom: 4 }}>
-                  ❗ 等效曝險 {(exposurePct * 100).toFixed(1)}% 已超過 70% 警戒線
+                  ❗ 等效曝險 {(exposurePct * 100).toFixed(1)}% 超過 160% 警戒線
                 </div>
-                <div style={{ color: '#9dadc2', fontSize: 12 }}>建議降低高風險部位或槓桿標的，使整體曝險回到 70% 以下</div>
+                <div style={{ color: '#9dadc2', fontSize: 12 }}>建議降低高風險部位或槓桿標的，使整體曝險回到 160% 以下</div>
               </div>
             )}
-            {isWarning && (
+            {isWarningHigh && (
               <div style={{ background: '#f59e0b1a', border: '1px solid #f59e0b40', borderRadius: 12, padding: '14px 16px' }}>
                 <div style={{ color: '#f59e0b', fontSize: 13 }}>
-                  ⚠️ 等效曝險 {(exposurePct * 100).toFixed(1)}% 已接近 70% 警戒線，注意風控
+                  ⚠️ 等效曝險 {(exposurePct * 100).toFixed(1)}% 偏高（140–160%），留意風控
                 </div>
               </div>
             )}
-            {isLow && (
+            {isWarningLow && (
               <div style={{ background: '#60a5fa1a', border: '1px solid #60a5fa40', borderRadius: 12, padding: '14px 16px' }}>
                 <div style={{ color: '#60a5fa', fontSize: 13 }}>
-                  ▼ 等效曝險 {(exposurePct * 100).toFixed(1)}% 低於 30%，整體部位偏保守
+                  ▼ 等效曝險 {(exposurePct * 100).toFixed(1)}% 偏低（80–100%），低於目標 120%
                 </div>
+              </div>
+            )}
+            {isUrgentLow && (
+              <div style={{ background: '#60a5fa1a', border: '1px solid #60a5fa40', borderRadius: 12, padding: '14px 16px' }}>
+                <div style={{ color: '#60a5fa', fontSize: 13, fontWeight: 500, marginBottom: 4 }}>
+                  ▼ 等效曝險 {(exposurePct * 100).toFixed(1)}% 低於 80%，部位明顯不足
+                </div>
+                <div style={{ color: '#9dadc2', fontSize: 12 }}>考慮增加風險資產或提高槓桿標的比重</div>
               </div>
             )}
 

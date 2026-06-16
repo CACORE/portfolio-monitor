@@ -163,12 +163,34 @@ def main():
 
     detail = '\n'.join(lines)
 
-    # 曝險 > 70% 警示
-    if exposure_pct > 0.70:
+    # 曝險警示（目標 120%，警戒區間如下）
+    # > 160%：過高；140–160%：偏高；80–100%：偏低；< 80%：過低
+    if exposure_pct > 1.60:
         send_telegram(
-            f'<b>🚨 投資牛馬｜曝險警示</b>\n\n'
-            f'等效曝險：<b>{exposure_pct*100:.1f}%</b>（已超過 70% 警戒線）\n'
-            f'現金/放貸：{(1-exposure_pct)*100:.1f}%\n\n'
+            f'<b>🚨 投資牛馬｜曝險過高警示</b>\n\n'
+            f'等效曝險：<b>{exposure_pct*100:.1f}%</b>（已超過 160% 警戒線）\n'
+            f'目標：120%\n\n'
+            f'{detail}\n\n'
+            f'持倉更新：{updated_at}　📅 {now_str}'
+        )
+    elif exposure_pct > 1.40:
+        send_telegram(
+            f'<b>⚠️ 投資牛馬｜曝險偏高</b>\n\n'
+            f'等效曝險：<b>{exposure_pct*100:.1f}%</b>（偏高，目標 120%）\n\n'
+            f'{detail}\n\n'
+            f'持倉更新：{updated_at}　📅 {now_str}'
+        )
+    elif exposure_pct < 0.80:
+        send_telegram(
+            f'<b>▼ 投資牛馬｜曝險過低</b>\n\n'
+            f'等效曝險：<b>{exposure_pct*100:.1f}%</b>（低於 80%，目標 120%）\n\n'
+            f'{detail}\n\n'
+            f'持倉更新：{updated_at}　📅 {now_str}'
+        )
+    elif exposure_pct < 1.00:
+        send_telegram(
+            f'<b>▼ 投資牛馬｜曝險偏低</b>\n\n'
+            f'等效曝險：<b>{exposure_pct*100:.1f}%</b>（偏低，目標 120%）\n\n'
             f'{detail}\n\n'
             f'持倉更新：{updated_at}　📅 {now_str}'
         )
@@ -176,11 +198,18 @@ def main():
     # 季度第一個交易日提醒
     if is_today_quarter_open():
         q = (date.today().month - 1) // 3 + 1
-        status = '⚠️ 曝險偏高' if exposure_pct > 0.55 else ('▼ 曝險偏低' if exposure_pct < 0.30 else '✓ 正常')
+        if exposure_pct > 1.40:
+            status = '⚠️ 偏高'
+        elif exposure_pct >= 1.00:
+            status = '✓ 接近目標'
+        elif exposure_pct >= 0.80:
+            status = '▼ 偏低'
+        else:
+            status = '▼ 過低'
         send_telegram(
             f'<b>📅 投資牛馬｜Q{q} 季度再平衡提醒</b>\n\n'
             f'今天是本季第一個交易日，記得檢視曝險！\n\n'
-            f'等效曝險：<b>{exposure_pct*100:.1f}%</b>　{status}\n'
+            f'等效曝險：<b>{exposure_pct*100:.1f}%</b>　{status}（目標 120%）\n'
             f'總資產：NT${total_assets_twd:,.0f}\n\n'
             f'{detail}\n\n'
             f'持倉更新：{updated_at}　📅 {now_str}'
