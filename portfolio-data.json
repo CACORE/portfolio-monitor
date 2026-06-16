@@ -8,8 +8,9 @@
       "qty": 9000,
       "priceSource": "twse",
       "currency": "TWD",
-      "unitPrice": 33.23,
-      "valueTWD": 166149.99999999997
+      "unitPrice": 37.31,
+      "valueTWD": 335790,
+      "leverage": 2
     },
     {
       "symbol": "00685L",
@@ -100,5 +101,5 @@
     }
   ],
   "usdRate": 31.542,
-  "updatedAt": "2026-06-16T02:49:13.871Z"
+  "updatedAt": "2026-06-16T06:53:57.670Z"
 }
