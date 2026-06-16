@@ -1,6 +1,12 @@
 """
-每日再平衡檢查 — 台股開盤後自動執行
+每日曝險檢查 — 台股開盤後自動執行
 持倉資料由網頁自動同步至 portfolio-data.json，無需手動更新
+
+曝險邏輯：
+  - 加密貨幣、台股、美股等風險資產計入曝險（× 槓桿倍數）
+  - 正2 ETF（leverage=2）等效曝險 = 名目市值 × 2
+  - cash / lending 板塊視為現金，不計曝險
+  - 等效曝險 / 總資產 > 70% → 警示
 """
 
 import json
@@ -18,9 +24,10 @@ TG_CHAT_ID = os.environ.get('TG_CHAT_ID', '')
 if not TG_TOKEN or not TG_CHAT_ID:
     sys.exit('缺少 TG_TOKEN / TG_CHAT_ID 環境變數，請在 repo Settings → Secrets 設定')
 
+SAFE_CATEGORIES = {'cash', 'lending'}
+
 
 def load_portfolio():
-    """從 portfolio-data.json 讀取持倉，找不到時回傳 None"""
     p = Path(__file__).parent.parent / 'portfolio-data.json'
     if not p.exists():
         return None
@@ -28,16 +35,54 @@ def load_portfolio():
         return json.load(f)
 
 
-def get_price(symbol_tw):
+def get_usd_rate():
+    """抓取即時 USD/TWD 匯率"""
     try:
-        r = requests.get(
-            f'https://query1.finance.yahoo.com/v8/finance/chart/{symbol_tw}?interval=1d&range=1d',
-            headers={'User-Agent': 'Mozilla/5.0'},
-            timeout=10,
-        )
-        return r.json()['chart']['result'][0]['meta']['regularMarketPrice']
+        r = requests.get('https://open.er-api.com/v6/latest/USD', timeout=10).json()
+        if r.get('rates', {}).get('TWD'):
+            return float(r['rates']['TWD'])
     except Exception:
-        return None
+        pass
+    return 31.5  # fallback
+
+
+def get_price_twd(asset, usd_rate):
+    """取得資產台幣單價（fixed 類型直接換算）"""
+    src = asset.get('priceSource', 'fixed')
+    symbol = asset['symbol']
+    currency = asset.get('currency', 'TWD')
+
+    if src == 'fixed':
+        return usd_rate if currency == 'USD' else 1.0
+
+    try:
+        if src == 'binance':
+            r = requests.get(
+                f'https://api.binance.com/api/v3/ticker/price?symbol={symbol}USDT',
+                timeout=10
+            ).json()
+            return float(r['price']) * usd_rate
+
+        if src == 'bitget':
+            r = requests.get(
+                f'https://api.bitget.com/api/v2/spot/market/tickers?symbol={symbol}USDT',
+                timeout=10
+            ).json()
+            return float(r['data'][0]['lastPr']) * usd_rate
+
+        if src in ('twse', 'us'):
+            suffix = '.TW' if src == 'twse' else ''
+            r = requests.get(
+                f'https://query1.finance.yahoo.com/v8/finance/chart/{symbol}{suffix}?interval=1d&range=1d',
+                headers={'User-Agent': 'Mozilla/5.0'},
+                timeout=10
+            ).json()
+            price = r['chart']['result'][0]['meta']['regularMarketPrice']
+            return float(price) * (usd_rate if src == 'us' else 1.0)
+
+    except Exception:
+        pass
+    return None
 
 
 def send_telegram(text):
@@ -71,59 +116,73 @@ def main():
         send_telegram('⚠️ 投資牛馬｜portfolio-data.json 不存在，請先在網頁⚙設定 GitHub Token')
         return
 
-    tw_assets   = [a for a in data['assets'] if a.get('category') == 'tw']
-    cash_assets = [a for a in data['assets'] if a.get('category') == 'cash']
-
-    if not tw_assets or not cash_assets:
-        send_telegram('⚠️ 投資牛馬｜找不到台股或現金板塊資產，請確認網頁資料')
+    assets = data.get('assets', [])
+    if not assets:
+        send_telegram('⚠️ 投資牛馬｜找不到資產資料，請確認網頁同步狀態')
         return
 
-    # 台股板塊全部標的市值加總
-    tw_val = 0.0
-    lines  = []
-    for a in tw_assets:
-        price = get_price(f"{a['symbol']}.TW")
+    usd_rate = get_usd_rate()
+    updated_at = data.get('updatedAt', '未知')[:16].replace('T', ' ')
+    now_str = datetime.now().strftime('%Y/%m/%d %H:%M')
+
+    # 計算各資產市值與曝險
+    total_assets_twd = 0.0
+    total_exposure   = 0.0
+    lines = []
+
+    for a in assets:
+        price = get_price_twd(a, usd_rate)
         if price is None:
             send_telegram(f"⚠️ 投資牛馬｜{a['symbol']} 價格抓取失敗，請手動確認")
             return
-        qty     = float(a['qty'])
+
+        qty     = float(a.get('qty', 0))
         val     = qty * price
-        tw_val += val
-        lines.append(f"{a['symbol']} {qty:g} 股 × {price:.2f} = NT${val:,.0f}")
+        lev     = float(a.get('leverage', 1))
+        cat     = a.get('category', '')
+        is_safe = cat in SAFE_CATEGORIES
 
-    cash_val = sum(float(a['qty']) for a in cash_assets)
-    tw_total = tw_val + cash_val
-    ratio    = tw_val / tw_total
-    diff     = tw_total * 0.5 - tw_val
-    now_str  = datetime.now().strftime('%Y/%m/%d %H:%M')
-    holdings = '\n'.join(lines)
+        total_assets_twd += val
+        if not is_safe:
+            total_exposure += val * lev
 
-    updated_at = data.get('updatedAt', '未知')[:16].replace('T', ' ')
+        lev_tag = f' [×{lev:.0f}]' if lev > 1 else ''
+        lines.append(
+            f"{a['symbol']}{lev_tag}：NT${val:,.0f}"
+            + (f'（{cat}）' if is_safe else f'  曝險 NT${val*lev:,.0f}')
+        )
 
-    # 70/30 危險區警示
-    if ratio > 0.70 or ratio < 0.30:
-        side   = '台股持倉過多' if ratio > 0.70 else '現金比例過高'
-        action = '▼ 建議賣出台股' if ratio > 0.70 else '▲ 建議買進台股'
+    if total_assets_twd <= 0:
+        return
+
+    exposure_pct = total_exposure / total_assets_twd
+    safe_pct     = 1 - (sum(
+        float(a.get('qty', 0)) * (get_price_twd(a, usd_rate) or 0)
+        for a in assets if a.get('category', '') not in SAFE_CATEGORIES
+    ) / total_assets_twd)
+
+    detail = '\n'.join(lines)
+
+    # 曝險 > 70% 警示
+    if exposure_pct > 0.70:
         send_telegram(
-            f'<b>🚨 投資牛馬｜再平衡警示</b>\n\n'
-            f'台股比例：<b>{ratio*100:.1f}% / {(1-ratio)*100:.1f}%</b>\n'
-            f'狀態：{side}（70/30 危險區）\n\n'
-            f'{action} <b>NT${abs(diff):,.0f}</b>\n\n'
-            f'{holdings}\n'
-            f'現金：NT${cash_val:,.0f}\n'
+            f'<b>🚨 投資牛馬｜曝險警示</b>\n\n'
+            f'等效曝險：<b>{exposure_pct*100:.1f}%</b>（已超過 70% 警戒線）\n'
+            f'現金/放貸：{(1-exposure_pct)*100:.1f}%\n\n'
+            f'{detail}\n\n'
             f'持倉更新：{updated_at}　📅 {now_str}'
         )
 
     # 季度第一個交易日提醒
     if is_today_quarter_open():
-        q      = (date.today().month - 1) // 3 + 1
-        status = '⚠️ 已偏離' if abs(ratio - 0.5) > 0.05 else '✓ 接近平衡'
+        q = (date.today().month - 1) // 3 + 1
+        status = '⚠️ 曝險偏高' if exposure_pct > 0.55 else ('▼ 曝險偏低' if exposure_pct < 0.30 else '✓ 正常')
         send_telegram(
             f'<b>📅 投資牛馬｜Q{q} 季度再平衡提醒</b>\n\n'
-            f'今天是本季第一個交易日，記得檢視再平衡！\n\n'
-            f'目前比例：<b>{ratio*100:.1f}% / {(1-ratio)*100:.1f}%</b>　{status}\n'
-            f'台股市值：NT${tw_val:,.0f}\n'
-            f'現金備用：NT${cash_val:,.0f}\n'
+            f'今天是本季第一個交易日，記得檢視曝險！\n\n'
+            f'等效曝險：<b>{exposure_pct*100:.1f}%</b>　{status}\n'
+            f'總資產：NT${total_assets_twd:,.0f}\n\n'
+            f'{detail}\n\n'
             f'持倉更新：{updated_at}　📅 {now_str}'
         )
 

@@ -2,13 +2,16 @@
 
 // ===== 預設資料 =====
 const DEFAULT_ASSETS = [
-  { id: 'btc',  category: 'crypto', symbol: 'BTC',     name: '比特幣',    qty: 0.16217047, priceSource: 'binance',  currency: 'USD' },
-  { id: 'bnb',  category: 'crypto', symbol: 'BNB',     name: '幣安幣',    qty: 3.29943355, priceSource: 'binance',  currency: 'USD' },
-  { id: 'bgb',  category: 'crypto', symbol: 'BGB',     name: 'Bitget Token', qty: 340.1,  priceSource: 'bitget',   currency: 'USD' },
-  { id: 'usd',  category: 'lending',symbol: 'USD',     name: '美元放貸',  qty: 3246.02,   priceSource: 'fixed',    currency: 'USD' },
-  { id: 'tw1',  category: 'tw',     symbol: '00631L',  name: '元大台灣50正2', qty: 0,   priceSource: 'twse',     currency: 'TWD' },
-  { id: 'cash', category: 'cash',   symbol: 'CASH',    name: '台股備用現金', qty: 300000, priceSource: 'fixed',  currency: 'TWD' },
+  { id: 'btc',  category: 'crypto', symbol: 'BTC',     name: '比特幣',    qty: 0.16217047, priceSource: 'binance',  currency: 'USD', leverage: 1 },
+  { id: 'bnb',  category: 'crypto', symbol: 'BNB',     name: '幣安幣',    qty: 3.29943355, priceSource: 'binance',  currency: 'USD', leverage: 1 },
+  { id: 'bgb',  category: 'crypto', symbol: 'BGB',     name: 'Bitget Token', qty: 340.1,  priceSource: 'bitget',   currency: 'USD', leverage: 1 },
+  { id: 'usd',  category: 'lending',symbol: 'USD',     name: '美元放貸',  qty: 3246.02,   priceSource: 'fixed',    currency: 'USD', leverage: 1 },
+  { id: 'tw1',  category: 'tw',     symbol: '00631L',  name: '元大台灣50正2', qty: 0,   priceSource: 'twse',     currency: 'TWD', leverage: 2 },
+  { id: 'cash', category: 'cash',   symbol: 'CASH',    name: '台股備用現金', qty: 300000, priceSource: 'fixed',  currency: 'TWD', leverage: 1 },
 ];
+
+// 不計曝險的板塊（現金類）
+const SAFE_CATEGORIES = new Set(['cash', 'lending']);
 
 const DEFAULT_LIABILITIES = [
   { id: 'usdt1', symbol: 'USDT', name: 'USDT借貸 1', qty: 5622.09,  currency: 'USD' },
@@ -429,14 +432,37 @@ function App() {
   const isPastThisQ = today >= thisQDate;
   const fmtDate = d => `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
 
-  // 台股/現金再平衡（台股板塊全部標的 vs 現金板塊）
-  const twStockVal = enriched.filter(a => a.category === 'tw').reduce((s, a) => s + a.valueTWD, 0);
-  const cashVal = enriched.filter(a => a.category === 'cash').reduce((s, a) => s + a.valueTWD, 0);
-  const twTotal = twStockVal + cashVal;
-  const twRatio = twTotal > 0 ? twStockVal / twTotal : 0;
-  const rebalDiff = twTotal * 0.5 - twStockVal;
-  const isUrgent  = twRatio < 0.30 || twRatio > 0.70;
-  const isWarning = !isUrgent && (twRatio < 0.45 || twRatio > 0.55);
+  // ===== 曝險計算 =====
+  // 等效曝險 = 各資產市值 × 槓桿倍數，現金/放貸板塊不計
+  const totalExposureVal = enriched.reduce((s, a) => {
+    if (SAFE_CATEGORIES.has(a.category)) return s;
+    return s + a.valueTWD * (a.leverage || 1);
+  }, 0);
+  const exposurePct = totalAssets > 0 ? totalExposureVal / totalAssets : 0;
+  const safeVal = enriched.filter(a => SAFE_CATEGORIES.has(a.category)).reduce((s, a) => s + a.valueTWD, 0);
+  const safePct = totalAssets > 0 ? safeVal / totalAssets : 0;
+
+  // 曝險狀態
+  const isUrgent  = exposurePct > 0.70;
+  const isWarning = !isUrgent && exposurePct > 0.55;
+  const isLow     = exposurePct < 0.30;
+
+  // 各板塊曝險明細（排除安全板塊）
+  const exposureByCat = Object.entries(
+    enriched.filter(a => !SAFE_CATEGORIES.has(a.category)).reduce((acc, a) => {
+      const cat = a.category;
+      if (!acc[cat]) acc[cat] = { rawVal: 0, expVal: 0 };
+      acc[cat].rawVal += a.valueTWD;
+      acc[cat].expVal += a.valueTWD * (a.leverage || 1);
+      return acc;
+    }, {})
+  ).map(([cat, v]) => ({
+    cat, ...v,
+    rawPct: totalAssets > 0 ? v.rawVal / totalAssets : 0,
+    expPct: totalAssets > 0 ? v.expVal / totalAssets : 0,
+    hasLeverage: enriched.some(a => a.category === cat && (a.leverage || 1) > 1),
+    ...CATEGORY_META[cat],
+  })).sort((a, b) => b.expPct - a.expPct);
 
   // ===== UI =====
   const s = {
@@ -753,10 +779,117 @@ function App() {
 
       {/* ===== 再平衡 ===== */}
       {tab === 'rebalance' && (() => {
-        const statusColor = isUrgent ? '#f87171' : isWarning ? '#f59e0b' : '#34d399';
-        const statusLabel = isUrgent ? '❗ 需立即再平衡' : isWarning ? '⚠️ 比例偏移中' : '✓ 比例平衡';
+        const statusColor = isUrgent ? '#f87171' : isWarning ? '#f59e0b' : isLow ? '#60a5fa' : '#34d399';
+        const statusLabel = isUrgent ? '❗ 曝險過高' : isWarning ? '⚠️ 曝險偏高' : isLow ? '▼ 曝險偏低' : '✓ 曝險正常';
         return (
           <div className="rv" style={{ display: 'flex', flexDirection: 'column', gap: 16, animationDelay: '360ms' }}>
+
+            {/* 總曝險 */}
+            <div style={{ ...s.card, padding: 20 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+                <div style={{ fontFamily: 'Syne', fontSize: 15, fontWeight: 700, color: '#f3f7fc' }}>資金曝險</div>
+                <span style={{ padding: '3px 10px', borderRadius: 20, background: statusColor + '22', color: statusColor, fontSize: 12 }}>{statusLabel}</span>
+              </div>
+
+              {/* 大數字 */}
+              <div style={{ textAlign: 'center', marginBottom: 20 }}>
+                <div style={{ fontSize: 44, fontWeight: 700, letterSpacing: '-1.5px', color: statusColor, textShadow: `0 0 40px ${statusColor}50` }}>
+                  {(exposurePct * 100).toFixed(1)}%
+                </div>
+                <div style={{ fontSize: 11, color: '#54677e', marginTop: 3 }}>等效曝險 / 總資產</div>
+              </div>
+
+              {/* 曝險進度條 */}
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ position: 'relative', background: '#0a1018', border: '1px solid #15243a', borderRadius: 6, height: 12 }}>
+                  <div style={{ position: 'absolute', left: 0,    width: '30%', height: '100%', background: '#60a5fa0e', borderRadius: '6px 0 0 6px' }} />
+                  <div style={{ position: 'absolute', left: '30%', width: '40%', height: '100%', background: '#34d3990e' }} />
+                  <div style={{ position: 'absolute', left: '70%', width: '30%', height: '100%', background: '#f871710e', borderRadius: '0 6px 6px 0' }} />
+                  <div style={{ position: 'absolute', left: 0, width: Math.min(exposurePct * 100, 100) + '%', height: '100%', background: `linear-gradient(90deg,${statusColor}99,${statusColor})`, borderRadius: 6, transition: 'width .5s cubic-bezier(.22,.9,.3,1)', boxShadow: `0 0 14px -2px ${statusColor}` }} />
+                </div>
+                <div style={{ display: 'flex', fontSize: 10, color: '#3a4b60', marginTop: 5, position: 'relative', height: 14 }}>
+                  <span style={{ position: 'absolute', left: '30%', transform: 'translateX(-50%)' }}>30%</span>
+                  <span style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', color: '#54677e' }}>中性</span>
+                  <span style={{ position: 'absolute', left: '70%', transform: 'translateX(-50%)' }}>70%</span>
+                </div>
+              </div>
+
+              {/* 曝險 / 安全 概覽 */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 14 }}>
+                <div style={{ background: 'rgba(6,10,16,.55)', border: '1px solid #101d30', borderRadius: 10, padding: '10px 14px' }}>
+                  <div style={{ fontSize: 10, color: '#54677e', marginBottom: 4 }}>等效曝險部位</div>
+                  <div style={{ fontSize: 15, color: statusColor, fontWeight: 500 }}>{(exposurePct * 100).toFixed(1)}%</div>
+                  <div style={{ fontSize: 10, color: '#3a4b60', marginTop: 2 }}>{fmtTWD(totalExposureVal)}</div>
+                </div>
+                <div style={{ background: 'rgba(6,10,16,.55)', border: '1px solid #101d30', borderRadius: 10, padding: '10px 14px' }}>
+                  <div style={{ fontSize: 10, color: '#54677e', marginBottom: 4 }}>現金 / 放貸（無曝險）</div>
+                  <div style={{ fontSize: 15, color: '#34d399', fontWeight: 500 }}>{(safePct * 100).toFixed(1)}%</div>
+                  <div style={{ fontSize: 10, color: '#3a4b60', marginTop: 2 }}>{fmtTWD(safeVal)}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* 曝險警示 */}
+            {isUrgent && (
+              <div style={{ background: '#f871711a', border: '1px solid #f8717140', borderRadius: 12, padding: '14px 16px' }}>
+                <div style={{ color: '#f87171', fontSize: 13, fontWeight: 500, marginBottom: 4 }}>
+                  ❗ 等效曝險 {(exposurePct * 100).toFixed(1)}% 已超過 70% 警戒線
+                </div>
+                <div style={{ color: '#9dadc2', fontSize: 12 }}>建議降低高風險部位或槓桿標的，使整體曝險回到 70% 以下</div>
+              </div>
+            )}
+            {isWarning && (
+              <div style={{ background: '#f59e0b1a', border: '1px solid #f59e0b40', borderRadius: 12, padding: '14px 16px' }}>
+                <div style={{ color: '#f59e0b', fontSize: 13 }}>
+                  ⚠️ 等效曝險 {(exposurePct * 100).toFixed(1)}% 已接近 70% 警戒線，注意風控
+                </div>
+              </div>
+            )}
+            {isLow && (
+              <div style={{ background: '#60a5fa1a', border: '1px solid #60a5fa40', borderRadius: 12, padding: '14px 16px' }}>
+                <div style={{ color: '#60a5fa', fontSize: 13 }}>
+                  ▼ 等效曝險 {(exposurePct * 100).toFixed(1)}% 低於 30%，整體部位偏保守
+                </div>
+              </div>
+            )}
+
+            {/* 曝險明細 */}
+            <div style={{ ...s.card, padding: 20 }}>
+              <div style={{ fontFamily: 'Syne', fontSize: 15, fontWeight: 700, color: '#f3f7fc', marginBottom: 16 }}>曝險明細</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {exposureByCat.map(b => (
+                  <div key={b.cat}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, marginBottom: 5 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                        <span style={{ color: b.color }}>{b.label}</span>
+                        {b.hasLeverage && (
+                          <span style={{ fontSize: 10, color: '#f59e0b', background: '#f59e0b15', border: '1px solid #f59e0b30', borderRadius: 4, padding: '1px 5px' }}>含槓桿</span>
+                        )}
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <span style={{ color: b.color, fontWeight: 500 }}>{(b.expPct * 100).toFixed(1)}%</span>
+                        {b.hasLeverage && (
+                          <span style={{ color: '#54677e', fontSize: 10, marginLeft: 5 }}>名目 {(b.rawPct * 100).toFixed(1)}%</span>
+                        )}
+                      </div>
+                    </div>
+                    <div style={{ background: '#0a1018', border: '1px solid #15243a', borderRadius: 4, height: 8, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: (b.expPct * 100) + '%', background: b.color, borderRadius: 3, transition: 'width .3s', boxShadow: `0 0 6px ${b.color}60` }} />
+                    </div>
+                  </div>
+                ))}
+                {/* 安全部位 */}
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 5 }}>
+                    <span style={{ color: '#54677e' }}>現金 / 放貸</span>
+                    <span style={{ color: '#54677e' }}>{(safePct * 100).toFixed(1)}% <span style={{ fontSize: 10, opacity: .6 }}>無曝險</span></span>
+                  </div>
+                  <div style={{ background: '#0a1018', border: '1px solid #15243a', borderRadius: 4, height: 8, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: (safePct * 100) + '%', background: '#3a4b60', borderRadius: 3, transition: 'width .3s' }} />
+                  </div>
+                </div>
+              </div>
+            </div>
 
             {/* 季度排程 */}
             <div style={{ ...s.card, padding: 20 }}>
@@ -775,113 +908,23 @@ function App() {
               </div>
             </div>
 
-            {/* 台股/現金 50/50 */}
-            <div style={{ ...s.card, padding: 20 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
-                <div style={{ fontFamily: 'Syne', fontSize: 15, fontWeight: 700, color: '#f3f7fc' }}>台股 / 現金</div>
-                <span style={{ padding: '3px 10px', borderRadius: 20, background: statusColor + '22', color: statusColor, fontSize: 12 }}>{statusLabel}</span>
-              </div>
-
-              {/* 數值 */}
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2,1fr)', gap: 10, marginBottom: 18 }}>
-                {[
-                  { label: '台股市值',  value: fmtTWD(twStockVal), color: '#60a5fa' },
-                  { label: '現金備用',  value: fmtTWD(cashVal),    color: '#9dadc2' },
-                ].map((c, i) => (
-                  <div key={i} style={{ background: 'rgba(6,10,16,.55)', border: '1px solid #101d30', borderRadius: 10, padding: '12px 16px', display: isMobile ? 'flex' : 'block', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ fontSize: 11, color: '#54677e', marginBottom: isMobile ? 0 : 4 }}>{c.label}</div>
-                    <div style={{ fontSize: 15, color: c.color }}>{c.value}</div>
-                  </div>
-                ))}
-              </div>
-
-              {/* 4區間進度條 */}
-              <div style={{ marginBottom: 18 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 6 }}>
-                  <span style={{ color: statusColor, fontWeight: 500 }}>目前 {(twRatio * 100).toFixed(1)}%</span>
-                  <span style={{ color: '#54677e' }}>目標 50%</span>
-                </div>
-                <div style={{ position: 'relative', background: '#0a1018', border: '1px solid #15243a', borderRadius: 6, height: 12 }}>
-                  <div style={{ position: 'absolute', left: '0%',  width: '30%', height: '100%', background: '#f8717112', borderRadius: '6px 0 0 6px' }} />
-                  <div style={{ position: 'absolute', left: '30%', width: '20%', height: '100%', background: '#f59e0b12' }} />
-                  <div style={{ position: 'absolute', left: '50%', width: '20%', height: '100%', background: '#f59e0b12' }} />
-                  <div style={{ position: 'absolute', left: '70%', width: '30%', height: '100%', background: '#f8717112', borderRadius: '0 6px 6px 0' }} />
-                  <div style={{ position: 'absolute', left: 0, width: Math.min(twRatio * 100, 100) + '%', height: '100%', background: `linear-gradient(90deg, ${statusColor}99, ${statusColor})`, borderRadius: 6, transition: 'width .5s cubic-bezier(.22,.9,.3,1)', boxShadow: `0 0 14px -2px ${statusColor}` }} />
-                  <div style={{ position: 'absolute', left: '50%', top: -2, width: 2, height: 'calc(100% + 4px)', background: '#2a4368', boxShadow: '0 0 6px rgba(99,141,255,.4)' }} />
-                </div>
-                <div style={{ display: 'flex', fontSize: 10, color: '#3a4b60', marginTop: 5, position: 'relative', height: 14 }}>
-                  <span style={{ position: 'absolute', left: '30%', transform: 'translateX(-50%)' }}>30%</span>
-                  <span style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', color: '#54677e' }}>50%</span>
-                  <span style={{ position: 'absolute', left: '70%', transform: 'translateX(-50%)' }}>70%</span>
-                </div>
-              </div>
-
-              {/* 提前警示 */}
-              {isUrgent && (
-                <div style={{ background: '#f871711a', border: '1px solid #f8717140', borderRadius: 10, padding: '14px 16px', marginBottom: 12 }}>
-                  <div style={{ color: '#f87171', fontSize: 13, fontWeight: 500, marginBottom: 4 }}>
-                    ❗ 比例 {(twRatio*100).toFixed(1)} / {(100-twRatio*100).toFixed(1)} 已觸發提前再平衡（閾值 70/30）
-                  </div>
-                  <div style={{ color: '#9dadc2', fontSize: 12 }}>建議不等季度，立即執行再平衡</div>
-                </div>
-              )}
-              {isWarning && (
-                <div style={{ background: '#f59e0b1a', border: '1px solid #f59e0b40', borderRadius: 10, padding: '14px 16px', marginBottom: 12 }}>
-                  <div style={{ color: '#f59e0b', fontSize: 13 }}>
-                    ⚠️ 比例 {(twRatio*100).toFixed(1)} / {(100-twRatio*100).toFixed(1)} 已偏離建議區間（45–55%）
-                  </div>
-                </div>
-              )}
-
-              {/* 操作建議 */}
-              <div style={{ background: 'rgba(6,10,16,.55)', border: '1px solid #101d30', borderRadius: 10, padding: '16px 18px' }}>
-                {Math.abs(rebalDiff) < 5000 ? (
-                  <div style={{ color: '#34d399', fontSize: 13 }}>✓ 目前比例平衡，無需操作</div>
-                ) : rebalDiff > 0 ? (
-                  <div>
-                    <div style={{ color: '#60a5fa', fontSize: 13, marginBottom: 6 }}>▲ 建議買進台股</div>
-                    <div style={{ color: '#f3f7fc', fontSize: 20, fontWeight: 500 }}>{fmtTWD(rebalDiff)}</div>
-                    <div style={{ color: '#54677e', fontSize: 11, marginTop: 4 }}>從現金買入，使台股回到 50%</div>
-                  </div>
-                ) : (
-                  <div>
-                    <div style={{ color: '#f59e0b', fontSize: 13, marginBottom: 6 }}>▼ 建議賣出台股</div>
-                    <div style={{ color: '#f3f7fc', fontSize: 20, fontWeight: 500 }}>{fmtTWD(Math.abs(rebalDiff))}</div>
-                    <div style={{ color: '#54677e', fontSize: 11, marginTop: 4 }}>賣出轉入現金，使台股回到 50%</div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* 板塊佔比 */}
-            <div style={{ ...s.card, padding: 20 }}>
-              <div style={{ fontFamily: 'Syne', fontSize: 15, fontWeight: 700, color: '#f3f7fc', marginBottom: 16 }}>板塊佔比</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {byCat.map(b => (
-                  <div key={b.cat}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 5 }}>
-                      <span style={{ color: b.color }}>{b.label}</span>
-                      <span style={{ color: '#9dadc2' }}>{fmtTWD(b.value)} · {(b.pct * 100).toFixed(1)}%</span>
-                    </div>
-                    <div style={{ background: '#0a1018', border: '1px solid #15243a', borderRadius: 4, height: 8, overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: (b.pct * 100) + '%', background: b.color, borderRadius: 3, transition: 'width .3s', boxShadow: `0 0 6px ${b.color}60` }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
           </div>
         );
       })()}
 
       {/* ===== 編輯資產 Modal ===== */}
       {editAsset && (
-        <EditModal title="編輯資產" data={editAsset}
+        <EditModal title="編輯資產" data={{ ...editAsset, leverage: String(editAsset.leverage ?? 1) }}
           fields={[
             { key: 'symbol', label: '代號' },
             { key: 'name', label: '名稱' },
             { key: 'category', label: '板塊', type: 'select', options: Object.entries(CATEGORY_META).map(([v, m]) => ({ value: v, label: m.label })) },
             { key: 'qty', label: '數量', type: 'number' },
+            { key: 'leverage', label: '槓桿倍數', type: 'select', options: [
+              { value: '1', label: '1x（一般標的）' },
+              { value: '2', label: '2x（正2 ETF）' },
+              { value: '3', label: '3x' },
+            ]},
             { key: 'priceSource', label: '報價來源', type: 'select', options: [
               { value: 'binance', label: 'Binance API (BTC/BNB等)' },
               { value: 'bitget', label: 'Bitget API (BGB等)' },
@@ -892,7 +935,7 @@ function App() {
             { key: 'currency', label: '計價幣別', type: 'select', options: [{ value: 'USD', label: 'USD' }, { value: 'TWD', label: 'TWD' }] },
           ]}
           onSave={form => {
-            setAssets(as => as.map(a => a.id === editAsset.id ? { ...a, ...form, qty: parseFloat(form.qty) } : a));
+            setAssets(as => as.map(a => a.id === editAsset.id ? { ...a, ...form, qty: parseFloat(form.qty), leverage: parseFloat(form.leverage) || 1 } : a));
             setEditAsset(null);
           }}
           onClose={() => setEditAsset(null)} />
@@ -900,12 +943,17 @@ function App() {
 
       {/* ===== 新增資產 Modal ===== */}
       {addMode === 'asset' && (
-        <EditModal title="新增資產" data={{ symbol: '', name: '', category: 'crypto', qty: '', priceSource: 'binance', currency: 'USD' }}
+        <EditModal title="新增資產" data={{ symbol: '', name: '', category: 'crypto', qty: '', priceSource: 'binance', currency: 'USD', leverage: '1' }}
           fields={[
             { key: 'symbol', label: '代號（例如 BTC）' },
             { key: 'name', label: '名稱' },
             { key: 'category', label: '板塊', type: 'select', options: Object.entries(CATEGORY_META).map(([v, m]) => ({ value: v, label: m.label })) },
             { key: 'qty', label: '數量', type: 'number' },
+            { key: 'leverage', label: '槓桿倍數', type: 'select', options: [
+              { value: '1', label: '1x（一般標的）' },
+              { value: '2', label: '2x（正2 ETF）' },
+              { value: '3', label: '3x' },
+            ]},
             { key: 'priceSource', label: '報價來源', type: 'select', options: [
               { value: 'binance', label: 'Binance API (BTC/BNB等)' },
               { value: 'bitget', label: 'Bitget API (BGB等)' },
@@ -916,7 +964,7 @@ function App() {
             { key: 'currency', label: '計價幣別', type: 'select', options: [{ value: 'USD', label: 'USD' }, { value: 'TWD', label: 'TWD' }] },
           ]}
           onSave={form => {
-            const newAsset = { ...form, id: Date.now().toString(), qty: parseFloat(form.qty) };
+            const newAsset = { ...form, id: Date.now().toString(), qty: parseFloat(form.qty), leverage: parseFloat(form.leverage) || 1 };
             setAssets(as => [...as, newAsset]);
             setAddMode(null);
           }}
