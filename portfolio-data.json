@@ -86,6 +86,16 @@
       "unitPrice": 1,
       "valueTWD": 301259,
       "leverage": 1
+    },
+    {
+      "symbol": "現金新光",
+      "name": "",
+      "category": "cash",
+      "qty": 269196,
+      "priceSource": "fixed",
+      "currency": "TWD",
+      "leverage": 1,
+      "id": "1782284287533"
     }
   ],
   "liabilities": [
@@ -105,5 +115,5 @@
     }
   ],
   "usdRate": 31.711,
-  "updatedAt": "2026-06-24T06:56:47.598Z"
+  "updatedAt": "2026-06-24T06:58:09.538Z"
 }
