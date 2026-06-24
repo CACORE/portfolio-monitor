@@ -79,12 +79,12 @@
       "id": "cash",
       "category": "cash",
       "symbol": "CASH",
-      "name": "台股備用現金",
-      "qty": 330949,
+      "name": "富邦",
+      "qty": 61753,
       "priceSource": "fixed",
       "currency": "TWD",
       "unitPrice": 1,
-      "valueTWD": 301259,
+      "valueTWD": 330949,
       "leverage": 1
     },
     {
@@ -117,5 +117,5 @@
     }
   ],
   "usdRate": 31.711,
-  "updatedAt": "2026-06-24T06:58:32.078Z"
+  "updatedAt": "2026-06-24T06:58:50.593Z"
 }
