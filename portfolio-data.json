@@ -13,6 +13,16 @@
       "leverage": 2
     },
     {
+      "symbol": "00685L",
+      "name": "",
+      "category": "tw",
+      "qty": 2400,
+      "priceSource": "twse",
+      "currency": "TWD",
+      "leverage": 2,
+      "id": "1783387313357"
+    },
+    {
       "symbol": "2327",
       "name": "國巨",
       "category": "tw",
@@ -86,16 +96,6 @@
       "id": "1782284287533",
       "unitPrice": 1,
       "valueTWD": 269196
-    },
-    {
-      "symbol": "00685L",
-      "name": "",
-      "category": "tw",
-      "qty": 2400,
-      "priceSource": "twse",
-      "currency": "TWD",
-      "leverage": 2,
-      "id": "1783387313357"
     }
   ],
   "liabilities": [
@@ -115,5 +115,5 @@
     }
   ],
   "usdRate": 32.079,
-  "updatedAt": "2026-07-07T01:21:55.370Z"
+  "updatedAt": "2026-07-07T01:22:07.789Z"
 }
