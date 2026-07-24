@@ -16,13 +16,13 @@
       "symbol": "00685L",
       "name": "",
       "category": "tw",
-      "qty": 4470,
+      "qty": 5000,
       "priceSource": "twse",
       "currency": "TWD",
       "leverage": 2,
       "id": "1783387313357",
-      "unitPrice": 10.54,
-      "valueTWD": 42160
+      "unitPrice": 11.13,
+      "valueTWD": 49751.100000000006
     },
     {
       "symbol": "2327",
@@ -118,5 +118,5 @@
     }
   ],
   "usdRate": 32.356,
-  "updatedAt": "2026-07-24T00:55:09.483Z"
+  "updatedAt": "2026-07-24T02:36:46.594Z"
 }
