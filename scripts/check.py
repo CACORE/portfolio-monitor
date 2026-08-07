@@ -133,7 +133,10 @@ def main():
     for a in assets:
         price = get_price_twd(a, usd_rate)
         if price is None:
-            send_telegram(f"⚠️ 投資牛馬｜{a['symbol']} 價格抓取失敗，請手動確認")
+            # Price-source failures are transient and must not alert the user.
+            # Abort because exposure would be incomplete; keep the diagnostic
+            # in GitHub Actions logs only.
+            print(f"SKIP: {a['symbol']} price unavailable; no Telegram alert sent")
             return
 
         qty     = float(a.get('qty', 0))
