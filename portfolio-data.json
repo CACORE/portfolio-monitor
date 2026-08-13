@@ -81,11 +81,11 @@
       "category": "cash",
       "symbol": "CASH",
       "name": "富邦",
-      "qty": 138139,
+      "qty": 103497,
       "priceSource": "fixed",
       "currency": "TWD",
       "unitPrice": 1,
-      "valueTWD": 88139,
+      "valueTWD": 138139,
       "leverage": 1
     },
     {
@@ -118,5 +118,5 @@
     }
   ],
   "usdRate": 32.2,
-  "updatedAt": "2026-08-13T01:02:49.341Z"
+  "updatedAt": "2026-08-13T01:04:22.590Z"
 }
