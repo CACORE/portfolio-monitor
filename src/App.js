@@ -86,20 +86,28 @@ async function fetchUsdRate() {
     const r = await fetch('https://open.er-api.com/v6/latest/USD').then(r => r.json());
     if (r?.rates?.TWD) return Math.round(r.rates.TWD * 1000) / 1000;
   } catch {}
-  // 備援：Yahoo Finance TWD=X 走 corsproxy
+  // 備援：由 GitHub Actions 產生的同網域報價快照
   try {
-    const yfUrl = 'https://query1.finance.yahoo.com/v8/finance/chart/TWD=X?interval=1d&range=1d';
-    const r = await fetch(`https://corsproxy.io/?${encodeURIComponent(yfUrl)}`)
-      .then(res => res.json()).catch(() => null);
-    const p = r?.chart?.result?.[0]?.meta?.regularMarketPrice;
-    if (p) return Math.round(p * 1000) / 1000;
+    const r = await fetch(`./quotes.json?t=${Date.now()}`).then(res => res.json());
+    if (r?.usdRate) return Math.round(r.usdRate * 1000) / 1000;
+  } catch {}
+  return null;
+}
+
+async function fetchQuoteSnapshot() {
+  try {
+    const r = await fetch(`./quotes.json?t=${Date.now()}`);
+    if (r.ok) return await r.json();
   } catch {}
   return null;
 }
 
 // ===== 價格抓取 =====
 async function fetchAllPrices(assets, usdRate) {
-  const prices = {};
+  // 台股與美股由 GitHub Actions 在伺服器端抓 Yahoo Finance，再發布成
+  // 同網域靜態檔案；避免瀏覽器 CORS 與第三方代理服務失效。
+  const snapshot = await fetchQuoteSnapshot();
+  const prices = { ...(snapshot?.pricesTWD || {}) };
 
   // Binance: BTC, BNB
   const binanceSymbols = assets.filter(a => a.priceSource === 'binance').map(a => a.symbol + 'USDT');
@@ -129,30 +137,6 @@ async function fetchAllPrices(assets, usdRate) {
       if (r?.data?.[0]?.lastPr) {
         prices[a.symbol] = parseFloat(r.data[0].lastPr) * usdRate;
       }
-    } catch {}
-  }
-
-  // 台股：Yahoo Finance 透過 corsproxy.io 代理（不 redirect，真正伺服器端轉發）
-  const twseAssets = assets.filter(a => a.priceSource === 'twse');
-  for (const a of twseAssets) {
-    try {
-      const yfUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${a.symbol}.TW?interval=1d&range=1d`;
-      const r = await fetch(`https://corsproxy.io/?${encodeURIComponent(yfUrl)}`)
-        .then(res => res.json()).catch(() => null);
-      const price = r?.chart?.result?.[0]?.meta?.regularMarketPrice;
-      if (price) prices[a.symbol] = price;
-    } catch {}
-  }
-
-  // 美股：Yahoo Finance 同樣走 corsproxy，代號不加 .TW，報價為 USD 需乘匯率
-  const usAssets = assets.filter(a => a.priceSource === 'us');
-  for (const a of usAssets) {
-    try {
-      const yfUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${a.symbol}?interval=1d&range=1d`;
-      const r = await fetch(`https://corsproxy.io/?${encodeURIComponent(yfUrl)}`)
-        .then(res => res.json()).catch(() => null);
-      const price = r?.chart?.result?.[0]?.meta?.regularMarketPrice;
-      if (price) prices[a.symbol] = price * usdRate;
     } catch {}
   }
 
@@ -383,7 +367,8 @@ function App() {
 
   // 計算資產市值（台幣）
   const enriched = assets.map(a => {
-    const unitPrice = prices[a.symbol] ?? (a.currency === 'USD' ? usdRate : 1);
+    // 快照短暫不可用時保留上次同步的單價，避免台股被錯算成 NT$1。
+    const unitPrice = prices[a.symbol] ?? a.unitPrice ?? (a.currency === 'USD' ? usdRate : 1);
     const valueTWD = a.qty * unitPrice;
     return { ...a, unitPrice, valueTWD };
   });
