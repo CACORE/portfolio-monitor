@@ -50,9 +50,10 @@ def fetch_market_price(asset, fixture):
     raise ValueError(f"Unsupported price source: {source}")
 
 
-def build_snapshot(portfolio, fixture=None):
+def build_snapshot(portfolio, fixture=None, previous=None):
     usd_rate = get_usd_rate(portfolio, fixture)
     prices = {}
+    previous_prices = (previous or {}).get("pricesTWD", {})
 
     for asset in portfolio.get("assets", []):
         symbol = asset["symbol"]
@@ -63,8 +64,18 @@ def build_snapshot(portfolio, fixture=None):
             prices[symbol] = usd_rate if currency == "USD" else 1.0
             continue
 
-        raw_price = fetch_market_price(asset, fixture)
-        prices[symbol] = raw_price * usd_rate if currency == "USD" else raw_price
+        try:
+            raw_price = fetch_market_price(asset, fixture)
+            prices[symbol] = raw_price * usd_rate if currency == "USD" else raw_price
+        except Exception:
+            # One provider must not take down every quote. Keep the last good
+            # snapshot; the browser also refreshes Binance/Bitget directly.
+            if symbol in previous_prices:
+                prices[symbol] = previous_prices[symbol]
+            elif asset.get("unitPrice") is not None:
+                prices[symbol] = float(asset["unitPrice"])
+            else:
+                raise
 
     return {
         "pricesTWD": prices,
@@ -82,8 +93,13 @@ def main():
 
     portfolio = json.loads(Path(args.portfolio).read_text(encoding="utf-8"))
     fixture = json.loads(Path(args.fixture).read_text(encoding="utf-8")) if args.fixture else None
-    snapshot = build_snapshot(portfolio, fixture)
-    Path(args.output).write_text(
+    output_path = Path(args.output)
+    try:
+        previous = json.loads(output_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        previous = None
+    snapshot = build_snapshot(portfolio, fixture, previous)
+    output_path.write_text(
         json.dumps(snapshot, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
