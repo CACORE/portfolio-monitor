@@ -69,11 +69,11 @@
       "category": "lending",
       "symbol": "USD",
       "name": "美元放貸",
-      "qty": 5594.45,
+      "qty": 5632.63,
       "priceSource": "fixed",
       "currency": "USD",
-      "unitPrice": 31.812,
-      "valueTWD": 162064.6434,
+      "unitPrice": 31.7,
+      "valueTWD": 177344.065,
       "leverage": 1
     },
     {
@@ -118,5 +118,5 @@
     }
   ],
   "usdRate": 31.7,
-  "updatedAt": "2026-09-01T01:31:46.771Z"
+  "updatedAt": "2026-09-01T02:47:21.257Z"
 }
