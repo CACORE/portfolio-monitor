@@ -16,13 +16,13 @@
       "symbol": "00685L",
       "name": "群益台灣正2",
       "category": "tw",
-      "qty": 10000,
+      "qty": 10259,
       "priceSource": "twse",
       "currency": "TWD",
       "leverage": 2,
       "id": "1783387313357",
-      "unitPrice": 11.84,
-      "valueTWD": 118400
+      "unitPrice": 12.39,
+      "valueTWD": 123900
     },
     {
       "symbol": "2327",
@@ -118,5 +118,5 @@
     }
   ],
   "usdRate": 31.47,
-  "updatedAt": "2026-09-10T01:28:06.975Z"
+  "updatedAt": "2026-09-10T01:28:20.518Z"
 }
