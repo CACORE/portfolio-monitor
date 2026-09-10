@@ -5,11 +5,11 @@
       "category": "tw",
       "symbol": "00631L",
       "name": "元大台灣50正2",
-      "qty": 11000,
+      "qty": 12000,
       "priceSource": "twse",
       "currency": "TWD",
-      "unitPrice": 36.33,
-      "valueTWD": 363300,
+      "unitPrice": 37.54,
+      "valueTWD": 412940,
       "leverage": 2
     },
     {
@@ -118,5 +118,5 @@
     }
   ],
   "usdRate": 31.47,
-  "updatedAt": "2026-09-10T01:27:57.004Z"
+  "updatedAt": "2026-09-10T01:28:06.975Z"
 }
