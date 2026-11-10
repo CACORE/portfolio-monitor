@@ -106,7 +106,7 @@
       "id": "usdt1",
       "symbol": "USDT",
       "name": "OKX借貸",
-      "qty": 6488.35,
+      "qty": 6489.53,
       "currency": "USD"
     },
     {
@@ -118,5 +118,5 @@
     }
   ],
   "usdRate": 32.781,
-  "updatedAt": "2026-11-10T01:50:14.324Z"
+  "updatedAt": "2026-11-10T02:07:18.566Z"
 }
