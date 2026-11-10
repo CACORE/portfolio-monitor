@@ -92,13 +92,13 @@
       "symbol": "CASH",
       "name": "新光",
       "category": "cash",
-      "qty": 212404,
+      "qty": 200389,
       "priceSource": "fixed",
       "currency": "TWD",
       "leverage": 1,
       "id": "1782284287533",
       "unitPrice": 1,
-      "valueTWD": 254667
+      "valueTWD": 212404
     }
   ],
   "liabilities": [
@@ -118,5 +118,5 @@
     }
   ],
   "usdRate": 32.781,
-  "updatedAt": "2026-11-10T02:07:36.448Z"
+  "updatedAt": "2026-11-10T02:07:58.093Z"
 }
